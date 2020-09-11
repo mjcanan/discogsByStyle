@@ -1,5 +1,5 @@
 # discogsByStyle
-Retrieves and sorts your discogs collection so you can view albums by style
+Retrieves and sorts your discogs collection so you can view albums by style and genre
 # Description
 Discogs.com is an online database where users can keep track of their record collection.
 As of 9/1/2020, Discogs's website and its API do not allow for users to sort their collections by style.
