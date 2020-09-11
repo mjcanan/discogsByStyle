@@ -10,24 +10,45 @@ class Record:
         self.styles = s
 
 
+
 def main():
     genre_list = []
     style_list = []
+    coll_size = 0
 
     if len(sys.argv) != 3 or "-h" in sys.argv:
         print("Usage: discogsByStyle.py <username> <token>\nFind a token here: discogs.com/settings/developers")
         sys.exit()
 
-    collection = get_vinyl(sys.argv)
+    print("\t***********DISCOGS BY STYLE***********\n" +
+    "\t* This app will sort your discogs    *\n" +
+    "\t* collection by style or genre.      *\n" +
+    "\t* Enter '-h' at anytime for help.    *\n" +
+    "\t**************************************\n\nLoading your Collection now.  This may take a few seconds...")
 
+    collection = get_vinyl(sys.argv)
     f_collection = format_out(collection, genre_list, style_list)
     f_collection.sort(key=lambda x: x.artist)
+    coll_size = len(f_collection)
+    genre_list.sort()
+    style_list.sort()
 
-    display_style(f_collection, style_list, genre_list)
+    while True:
+        cmd = input("Command: ")
+        if cmd.lower() == 'k':
+            print(f"Style Keys: {' | '.join(style_list)}\n")
+            print(f"Genre Keys: {' | '.join(genre_list)}\n")
+        elif cmd.lower() == 's' or cmd.lower() == 'g':
+            display(f_collection, style_list, genre_list, cmd, coll_size)
+        elif cmd.lower() == 'q':
+            sys.exit()
+        elif cmd.lower() == '-h':
+            print("Usage:\nk: print style and genre keys\ns: lookup by style\ng: lookup by genre\nq: quit")
+        else:
+            print("Invalid command.  Enter -h for help")
 
 
 def format_out(coll, g_list, s_list):
-    # TODO: implement sort by style
     records = []
 
     for i in range(len(coll)):
@@ -50,31 +71,44 @@ def format_out(coll, g_list, s_list):
     return records
 
 
-def display_style(coll, s_list, g_list):
-    style_opt = ""
+def display(coll, s_list, g_list, c, size):
+    _opt = ""
     count = 0
-    s_list.sort()
-    g_list.sort()
 
-    print(f"All Styles: {', '.join(s_list)}")
-    print(f"\nAll Genres: {', '.join(g_list)}")
-    # TODO: add option to sort by genre
+    if c == 's':
+        sort_type = s_list
+        sort_str = "Style"
+    else:
+        sort_type = g_list
+        sort_str = "Genre"
+
     # TODO: add option to sort by release year
-    while True:
-        while not (style_opt in s_list):
-            style_opt = input("Choose style: ")
+    while not (_opt in sort_type):
+        _opt = input(f"Choose {sort_str}: ")
 
-        for record in coll:
-            if style_opt in record.styles:
-                print(f"{count + 1}. {record.artist} - {record.title} --- ({', '.join(record.styles)})")
-                count += 1
-        print(f"Total records of that style: {count}")
-        to_close = input("Press Q to Quit, Press Enter to Continue: ")
-        if to_close.lower() == 'q':
-            sys.exit()
+        if _opt.lower() == '-h':
+            _opt = input("Usage: Enter a key. For list of keys, Press k. Input a key or press enter to continue. ")
+
+        if _opt.lower() == 'k':
+            if c == 's':
+                print(f" Styles: {' | '.join(s_list)}")
+            else:
+                print(f" Genres: {' | '.join(g_list)}")
         else:
-            style_opt = ""
-            count = 0
+            pass
+
+    for record in coll:
+        if c == 's' and _opt in record.styles:
+            print(f"{count + 1}. {record.artist} - {record.title} --- ({' | '.join(record.styles)})")
+            count += 1
+        elif c == 'g' and _opt in record.genres:
+            print(f"{count + 1}. {record.artist} - {record.title} --- ({' | '.join(record.genres)})")
+            count += 1
+        else:
+            pass
+
+    print("---------------------------------------------------------------")
+    print("Total: {0}. Percentage of Collection = {1:.2f} %".format(count, (100*count/size)))
 
 
 def error_check(res):
@@ -85,10 +119,12 @@ def error_check(res):
 
 
 def get_vinyl(arg_list):
+
     # TODO: allow for selection of private folders - current implementation only selects Uncategorized folder
     col_list = []
-    url = ("https://api.discogs.com/users/" + arg_list[1] + "/collection/folders/1/releases?token=" + arg_list[2]
-           + "&per_page=100")
+    url = ("https://api.discogs.com/users/" + arg_list[1] + "/collection/folders/1/releases?token=" + arg_list[2] +
+           "&per_page=100")
+
     response = requests.get(url)
     error_check(response)
 
