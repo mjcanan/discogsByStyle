@@ -16,9 +16,9 @@ You may need to sign in first.
 Once you have your token, enter the following on the command line:
 <br>
 <pre>python discogsByStyle.py [user name] [token]</pre>
-###Flags
+### Flags
 -h: Help.  Prints usage
-###Commands
+### Commands
  k: Prints style and genre keys<br>
  a: Will print all records in your collection, sorted by artist name<br>
  s: Returns all records in your collection that match the selected style, sorted by artist name<br>
@@ -26,14 +26,14 @@ Once you have your token, enter the following on the command line:
 -h: Help<br>
  q: Quit
 # Return Format
-###Sorting by Style or Genre
+### Sorting by Style or Genre
 <pre>[#]. [Artist Name] - [Record Title] --- [List of All Genres or Styles for the Record]
 .
 .
 -------------------------------------------------------
 Total: [Total Records Returned]. Percentage of Collection = [Percentage of Total Collection] %
 </pre>
-###Printing All
+### Printing All
 <pre>[#]. [Artist Name] - [Record Title]
     Styles: [Styles]
     Genres: [Genres]
@@ -41,7 +41,7 @@ Total: [Total Records Returned]. Percentage of Collection = [Percentage of Total
 .
 -------------------------------------------------------
 Total: [Total Records Returned]</pre>
-#Limitations
+# Limitations
 Printing all records while sorting by style and genre is currently not supported, although I'm not sure that would be a 
 useful feature.  Sorting categorized folders is also currently not supported, but may be implemented in the future, 
 along with additional sort criteria, such as a "Sort by Decade" feature.<br><br>

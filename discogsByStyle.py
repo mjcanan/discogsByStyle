@@ -140,7 +140,7 @@ def display(coll, s_list, g_list, c, size):
 
 
 def error_check(res):
-    # Handling respones other than OK
+    # Handling responses other than OK
     if not(res.status_code == 200):
         print("An Error Occurred.  Please Try Again.")
         print(f"Code {res.status_code}: {res.reason}.")
