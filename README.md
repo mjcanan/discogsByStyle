@@ -96,6 +96,15 @@ useful feature.<br><br>
 
 <li>Sorting categorized folders is also currently not supported, but may be implemented in the future.<br><br>
 
+<li>Discogs dates the records in your collection based on the year the particular version of the album was released.
+ Thus, the "year" field does not reliably return accurate information about the year the album was originally released 
+ (if the record in your collection is a reissue, Discogs will store the year that the reissue came out as the album's
+    release year).  This makes this program an unreliable method for sorting records by decade.  
+    <ul>This could be corrected by obtaining the master_id (if available) and making a separate call to the API, but
+    Discogs throttles calls to 60 per minute at the most.  This would greatly increase the program's runtime and make it
+    nearly unusable in its current implementation.
+    </ul><br>
+
 <li>Not all records on Discogs have 'year' data, making records of certain eras unsortable by decade.  This is more of a
 problem with the data set than with the program.<br><br>
 

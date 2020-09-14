@@ -38,7 +38,7 @@ def main():
 
 Loading your Discogs collection now.  This may take a few seconds...''')
 
-    # Obtain collection from Discogs, sort by artist name, then sort genres and styles alphabetically
+    # Obtain collection from Discogs, sort by artist name, then sort genres and styles alphabetically, decades by year
     collection = get_vinyl(sys.argv)
     f_collection = format_out(collection, genre_list, style_list, decade_list)
     f_collection.sort(key=lambda x: x.artist)
@@ -47,8 +47,6 @@ Loading your Discogs collection now.  This may take a few seconds...''')
     genre_list.sort()
     style_list.sort()
     decade_list.sort()
-
-    #TODO: add feature to calculate percentage of all styles and genres in your collection
 
     # User Input
     while True:
@@ -175,12 +173,18 @@ def display(coll, s_list, g_list, d_list, c, size):
                     sort_type = g_list
                 elif _opt == 'q':
                     sys.exit()
+                elif _opt == 'm':
+                    return
                 elif _opt == 'a':
                     sort_type = _opt
                 elif _opt == 'k':
-                    print("\tStyle: s\n\tGenre: g\n\tAll:   a")
+                    print("\ts: Sort by style\n\tg: Sort by genre\n\ta: Print all from this decade")
                 else:
-                    print("\tInvalid Command.\n\tEnter s, g or a to continue.  Press k to get keys.  Press q to quit.")
+                    print('''Usage:
+            Enter s, g or a to select a sort method
+            Press k to get keys
+            Press m to return to the main menu
+            Press q to quit.''')
 
     # Print records to screen in easy to read format
     if d_opt:
