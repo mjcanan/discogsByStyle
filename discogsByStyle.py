@@ -3,7 +3,7 @@ import sys
 
 
 class Record:
-    def __init__(self,a,t,g,s,y):
+    def __init__(self, a, t, g, s, y):
         self.artist = a
         self.title = t
         self.genres = g
@@ -13,7 +13,7 @@ class Record:
 
     def __decade__(self, year):
         if year == 0:
-            return ("n/a")
+            return "n/a"
         else:
             return str(year - (year % 10))
 
@@ -30,11 +30,11 @@ def main():
         sys.exit()
 
     print('''
-            ***********DISCOGS BY STYLE***********
-            * This app will sort your discogs    *
-            * collection by style or genre.      *
-            * Enter '-h' at anytime for help.    *
-            **************************************
+            ***************DISCOGS SORTER*****************
+            * This app will sort your discogs collection *
+            * by style, genre and/or decade.             *
+            * Enter '-h' at anytime for help.            *
+            **********************************************
 
 Loading your Discogs collection now.  This may take a few seconds...''')
 
@@ -43,6 +43,7 @@ Loading your Discogs collection now.  This may take a few seconds...''')
     f_collection = format_out(collection, genre_list, style_list, decade_list)
     f_collection.sort(key=lambda x: x.artist)
     coll_size = len(f_collection)
+
     genre_list.sort()
     style_list.sort()
     decade_list.sort()
