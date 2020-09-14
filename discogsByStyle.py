@@ -9,7 +9,13 @@ class Record:
         self.genres = g
         self.styles = s
         self.year = y
-        self.decade = str(y-(y%10))
+        self.decade = self.__decade__(y)
+
+    def __decade__(self, year):
+        if year == 0:
+            return ("n/a")
+        else:
+            return str(year - (year % 10))
 
 
 def main():
@@ -39,19 +45,20 @@ Loading your Discogs collection now.  This may take a few seconds...''')
     coll_size = len(f_collection)
     genre_list.sort()
     style_list.sort()
+    decade_list.sort()
 
     #TODO: add feature to calculate percentage of all styles and genres in your collection
 
     # User Input
     while True:
-        cmd = input("Command: ")
-        if cmd.lower() == 'k':
+        cmd = input("Command: ").lower()
+        if cmd == 'k':
             display_keys(style_list, genre_list, decade_list)
-        elif cmd.lower() in ['s', 'g', 'a', 'o', 'd']:
+        elif cmd in ['s', 'g', 'a', 'o', 'd']:
             display(f_collection, style_list, genre_list, decade_list, cmd, coll_size)
-        elif cmd.lower() == 'q':
+        elif cmd == 'q':
             sys.exit()
-        elif cmd.lower() == '-h':
+        elif cmd == '-h':
             print('''Usage:
             k: Print style, genre, and/or decade sort keys
             a: Print all records in your collection, sorted by artist name
@@ -84,6 +91,7 @@ def format_out(coll, g_list, s_list, d_list):
             rec = Record(artist, title, genres, styles, year)
             records.append(rec)
 
+            # Initializing key lists
             for s in styles:
                 if not(s in s_list):
                     s_list.append(s)
@@ -102,7 +110,7 @@ def display_keys(s_list, g_list, d_list):
     if g_list:
         print(f"Genre Keys: {' | '.join(g_list)}\n")
     if d_list:
-        print(f"Decade Keys: {' | '.join(d_list)} -- '0' will print all records\n")
+        print(f"Decade Keys: {' | '.join(d_list)}\n")
 
 
 def display(coll, s_list, g_list, d_list, c, size):
@@ -132,12 +140,8 @@ def display(coll, s_list, g_list, d_list, c, size):
     while not (_opt in sort_type):
         _opt = input(f"Choose {sort_str}: ")
 
-        if c == 'd' and _opt not in sort_type:
-            print("Invalid Decade. ", end="")
-            continue
-
         if _opt.lower() == '-h':
-            _opt = input("Usage: Enter a key. For list of keys, Press k. Input a key or press enter to continue. ")
+            print("\nUsage: Enter a key. For list of keys, Press k.\nPress q to quit, Press m to return to main menu\n")
             continue
         elif _opt.lower() == 'k':
             if c == 's':
@@ -149,11 +153,17 @@ def display(coll, s_list, g_list, d_list, c, size):
             continue
         elif _opt.lower() == 'q':
             sys.exit()
+        elif _opt.lower() == 'm':
+            return
 
         if c == 'd':
+            if _opt not in sort_type:
+                print("Invalid Decade. ", end="")
+                continue
+
             d_opt = _opt
             while _opt not in ['s', 'g', 'q', 'a']:
-                _opt = input("Choose between Style (s), Genre (g), or All (a): ")
+                _opt = input("Choose between Style (s), Genre (g), or All (a): ").lower()
                 if _opt == 's':
                     c = 's'
                     sort_str = "Style"
@@ -173,7 +183,9 @@ def display(coll, s_list, g_list, d_list, c, size):
 
     # Print records to screen in easy to read format
     if d_opt:
-        print("-" * 30 + d_opt + "-" * 30)
+        print("-" * 26 + d_opt + "-" * 26)
+    else:
+        print("-" * 56)
 
     for record in coll:
         if c == 'a' or (c == 'd' and d_opt in record.decade):
@@ -186,40 +198,40 @@ def display(coll, s_list, g_list, d_list, c, size):
             for genre in record.genres:
                 genre_stats.append(genre)
             decade_stats.append(record.decade)
-        elif c == 's' and _opt in record.styles:
+        elif c in ['s', 'g'] and (_opt in record.styles or _opt in record.genres):
             if d_opt:
                 if d_opt == record.decade:
-                    print(f"{count + 1}. {record.artist} - {record.title} ({record.year}) --- ({' | '.join(record.styles)})")
+                    print(f"{count + 1}. {record.artist} - {record.title} ({record.year})")
+                    print(f"\tStyles: {' | '.join(record.styles)}\n\tGenres: {' | '.join(record.genres)}")
                 else:
                     count -= 1
                     pass
             else:
-                print(f"{count + 1}. {record.artist} - {record.title} ({record.year}) --- ({' | '.join(record.styles)})")
-        elif c == 'g' and _opt in record.genres:
-            print(f"{count + 1}. {record.artist} - {record.title} ({record.year}) --- ({' | '.join(record.genres)})")
+                print(f"{count + 1}. {record.artist} - {record.title} ({record.year})")
+                print(f"\tStyles: {' | '.join(record.styles)}\n\tGenres: {' | '.join(record.genres)}")
         else:
             count -= 1
             pass
         count += 1
 
     if not(c == 'o'):
-        print("----------------------------------------------------------------")
+        print("-" * 56)
         print(f"Total: {count}", end="")
         if d_opt:
-            print(f" from {d_opt}", end="")
+            print(f" from the {d_opt}s", end="")
         if not(c == 'a'):
-            print(". Percentage of Collection = {0:.2f} %".format(100*count/size))
+            print(". Percentage of Collection = {0:.2f} %".format(100 * count/size))
         else:
             print("")
     else:
+        # Output formatting for 'o' command
         style_stats.sort()
         genre_stats.sort()
         decade_stats.sort()
 
-        print("\n" + "-" * 56 + "\n" + " " * 19 + "TOTAL STYLES\n" + ("-" * 56))
-
         # Counts the number of occurrences of a particular style and creates a tuple, which is then appended
         # to a list of styles.  That list of (style, count) tuples is sorted based on the count, and then printed
+        print(" " * 19 + "TOTAL STYLES\n" + ("-" * 56))
         for style in s_list:
             num = style_stats.count(style)
             t = (style, num)
@@ -228,9 +240,9 @@ def display(coll, s_list, g_list, d_list, c, size):
         for i in range(len(all_styles)):
             print(str(all_styles[i][0]) + "." * (40-len(all_styles[i][0])), end="")
             print("{:>4} --- {:>5.2f} %".format(all_styles[i][1], (100*(all_styles[i][1]/size))))
-        print("-" * 56 + "\n" + " " * 19 + "TOTAL GENRES\n" + ("-" * 56))
 
         # Performs a similar function as above, but with genre instead of style
+        print("-" * 56 + "\n" + " " * 19 + "TOTAL GENRES\n" + ("-" * 56))
         for genre in g_list:
             num = genre_stats.count(genre)
             t = (genre, num)
@@ -239,9 +251,9 @@ def display(coll, s_list, g_list, d_list, c, size):
         for i in range(len(all_genres)):
             print(str(all_genres[i][0]) + "." * (40-len(all_genres[i][0])), end="")
             print("{:>4} --- {:>5.2f} %".format(all_genres[i][1], (100*(all_genres[i][1]/size))))
-        print("-" * 56 + "\n" + " " * 18 + "TOTAL DECADES\n" + ("-" * 56))
 
         # Same as above, but with decades
+        print("-" * 56 + "\n" + " " * 18 + "TOTAL DECADES\n" + ("-" * 56))
         for decade in d_list:
             num = decade_stats.count(decade)
             t = (decade, num)
