@@ -3,17 +3,19 @@ import sys
 
 
 class Record:
-    def __init__(self,a,t,g,s):
+    def __init__(self,a,t,g,s,y):
         self.artist = a
         self.title = t
         self.genres = g
         self.styles = s
-        #self.year = y
+        self.year = y
+        self.decade = str(y-(y%10))
 
 
 def main():
     genre_list = []
     style_list = []
+    decade_list = []
     coll_size = 0
 
     # Error Check for proper command line inputs
@@ -32,7 +34,7 @@ Loading your Discogs collection now.  This may take a few seconds...''')
 
     # Obtain collection from Discogs, sort by artist name, then sort genres and styles alphabetically
     collection = get_vinyl(sys.argv)
-    f_collection = format_out(collection, genre_list, style_list)
+    f_collection = format_out(collection, genre_list, style_list, decade_list)
     f_collection.sort(key=lambda x: x.artist)
     coll_size = len(f_collection)
     genre_list.sort()
@@ -44,24 +46,30 @@ Loading your Discogs collection now.  This may take a few seconds...''')
     while True:
         cmd = input("Command: ")
         if cmd.lower() == 'k':
-            print(f"Style Keys: {' | '.join(style_list)}\n")
-            print(f"Genre Keys: {' | '.join(genre_list)}\n")
-        elif cmd.lower() in ['s','g','a']:
-            display(f_collection, style_list, genre_list, cmd, coll_size)
+            display_keys(style_list, genre_list, decade_list)
+        elif cmd.lower() in ['s', 'g', 'a', 'o', 'd']:
+            display(f_collection, style_list, genre_list, decade_list, cmd, coll_size)
         elif cmd.lower() == 'q':
             sys.exit()
         elif cmd.lower() == '-h':
             print('''Usage:
-            k: Print style and genre sort keys
+            k: Print style, genre, and/or decade sort keys
             a: Print all records in your collection, sorted by artist name
+            o: Print your whole collection, with number of records per style, genre, and decade, sorted by total records
             s: Return all records in your collection that match a chosen style, sorted by artist name
             g: Return all records in your collection that match a chosen genre, sorted by artist name
+            d: Sorts collection by decade, then choose to either to:
+                s: Return all records that match the chosen style AND decade
+                g: Return all records that match the chose genre AND decade, or
+                a: Print all records in your collection from that decade (xxx0 - xxxx9)
+                    NOTE:   not all records in Discogs have year information.  For those records that don't
+                            have a year, the year will either appear as '0' or 'n/a'
             q: Quit''')
         else:
             print("Invalid command.  Enter -h for help")
 
 
-def format_out(coll, g_list, s_list):
+def format_out(coll, g_list, s_list, d_list):
     records = []
 
     # Create a list of Record objects containing relevant data from Discogs API calls
@@ -71,8 +79,9 @@ def format_out(coll, g_list, s_list):
             artist = coll[i]['releases'][j]['basic_information']['artists'][0]['name']
             genres = coll[i]['releases'][j]['basic_information']['genres']
             styles = coll[i]['releases'][j]['basic_information']['styles']
+            year = coll[i]['releases'][j]['basic_information']['year']
 
-            rec = Record(artist, title, genres, styles)
+            rec = Record(artist, title, genres, styles, year)
             records.append(rec)
 
             for s in styles:
@@ -81,62 +90,169 @@ def format_out(coll, g_list, s_list):
             for g in genres:
                 if not(g in g_list):
                     g_list.append(g)
+            if not (rec.decade in d_list):
+                d_list.append(rec.decade)
 
     return records
 
 
-def display(coll, s_list, g_list, c, size):
-    _opt = ""
-    count = 0
+def display_keys(s_list, g_list, d_list):
+    if s_list:
+        print(f"Style Keys: {' | '.join(s_list)}\n")
+    if g_list:
+        print(f"Genre Keys: {' | '.join(g_list)}\n")
+    if d_list:
+        print(f"Decade Keys: {' | '.join(d_list)} -- '0' will print all records\n")
 
-    # Program branches here based on command input
+
+def display(coll, s_list, g_list, d_list, c, size):
+    _opt = ""
+    d_opt = 0
+    count = 0
+    style_stats = []
+    genre_stats = []
+    decade_stats = []
+    all_styles = []
+    all_genres = []
+    all_decades = []
+
+    # Program branches here based on command input -- set sort_type to _opt to bypass Style/Genre/Decade while loop
     if c == 's':
         sort_type = s_list
         sort_str = "Style"
-    elif c == 'a':
-        sort_type = _opt
-        sort_str = "All"
-    else:
+    elif c == 'g':
         sort_type = g_list
         sort_str = "Genre"
+    elif c == 'd':
+        sort_type = d_list
+        sort_str = "Decade"
+    else:
+        sort_type = _opt
 
-    # TODO: add option to sort by decade
     while not (_opt in sort_type):
         _opt = input(f"Choose {sort_str}: ")
 
+        if c == 'd' and _opt not in sort_type:
+            print("Invalid Decade. ", end="")
+            continue
+
         if _opt.lower() == '-h':
             _opt = input("Usage: Enter a key. For list of keys, Press k. Input a key or press enter to continue. ")
+            continue
         elif _opt.lower() == 'k':
             if c == 's':
-                print(f" Styles: {' | '.join(s_list)}")
+                display_keys(s_list, 0, 0)
+            elif c == 'g':
+                display_keys(0, g_list, 0)
             else:
-                print(f" Genres: {' | '.join(g_list)}")
+                display_keys(0, 0, d_list)
+            continue
         elif _opt.lower() == 'q':
             sys.exit()
-        else:
-            pass
+
+        if c == 'd':
+            d_opt = _opt
+            while _opt not in ['s', 'g', 'q', 'a']:
+                _opt = input("Choose between Style (s), Genre (g), or All (a): ")
+                if _opt == 's':
+                    c = 's'
+                    sort_str = "Style"
+                    sort_type = s_list
+                elif _opt == 'g':
+                    c = 'g'
+                    sort_str = "Genre"
+                    sort_type = g_list
+                elif _opt == 'q':
+                    sys.exit()
+                elif _opt == 'a':
+                    sort_type = _opt
+                elif _opt == 'k':
+                    print("\tStyle: s\n\tGenre: g\n\tAll:   a")
+                else:
+                    print("\tInvalid Command.\n\tEnter s, g or a to continue.  Press k to get keys.  Press q to quit.")
 
     # Print records to screen in easy to read format
+    if d_opt:
+        print("-" * 30 + d_opt + "-" * 30)
+
     for record in coll:
-        if c == 'a':
-            print(f"{count + 1}. {record.artist} - {record.title}\n\tStyles: {' | '.join(record.styles)}\n\tGenres: " +
-                  f"{' | '.join(record.genres)}")
+        if c == 'a' or (c == 'd' and d_opt in record.decade):
+            print(f"{count + 1}. {record.artist} - {record.title} ({record.year})\n\t" +
+                  f"Styles: {' | '.join(record.styles)}\n\tGenres: {' | '.join(record.genres)}")
+        elif c == 'o':
+            # Makes a list containing every occurrence of a style and genre in the collection
+            for style in record.styles:
+                style_stats.append(style)
+            for genre in record.genres:
+                genre_stats.append(genre)
+            decade_stats.append(record.decade)
         elif c == 's' and _opt in record.styles:
-            print(f"{count + 1}. {record.artist} - {record.title} --- ({' | '.join(record.styles)})")
+            if d_opt:
+                if d_opt == record.decade:
+                    print(f"{count + 1}. {record.artist} - {record.title} ({record.year}) --- ({' | '.join(record.styles)})")
+                else:
+                    count -= 1
+                    pass
+            else:
+                print(f"{count + 1}. {record.artist} - {record.title} ({record.year}) --- ({' | '.join(record.styles)})")
         elif c == 'g' and _opt in record.genres:
-            print(f"{count + 1}. {record.artist} - {record.title} --- ({' | '.join(record.genres)})")
+            print(f"{count + 1}. {record.artist} - {record.title} ({record.year}) --- ({' | '.join(record.genres)})")
         else:
             count -= 1
             pass
         count += 1
 
-    print("---------------------------------------------------------------")
-    print(f"Total: {count}", end="")
-
-    if not(c == 'a'):
-        print(". Percentage of Collection = {0:.2f} %".format(100*count/size))
+    if not(c == 'o'):
+        print("----------------------------------------------------------------")
+        print(f"Total: {count}", end="")
+        if d_opt:
+            print(f" from {d_opt}", end="")
+        if not(c == 'a'):
+            print(". Percentage of Collection = {0:.2f} %".format(100*count/size))
+        else:
+            print("")
     else:
-        print("")
+        style_stats.sort()
+        genre_stats.sort()
+        decade_stats.sort()
+
+        print("\n" + "-" * 56 + "\n" + " " * 19 + "TOTAL STYLES\n" + ("-" * 56))
+
+        # Counts the number of occurrences of a particular style and creates a tuple, which is then appended
+        # to a list of styles.  That list of (style, count) tuples is sorted based on the count, and then printed
+        for style in s_list:
+            num = style_stats.count(style)
+            t = (style, num)
+            all_styles.append(t)
+        all_styles.sort(key=lambda x: x[1])
+        for i in range(len(all_styles)):
+            print(str(all_styles[i][0]) + "." * (40-len(all_styles[i][0])), end="")
+            print("{:>4} --- {:>5.2f} %".format(all_styles[i][1], (100*(all_styles[i][1]/size))))
+        print("-" * 56 + "\n" + " " * 19 + "TOTAL GENRES\n" + ("-" * 56))
+
+        # Performs a similar function as above, but with genre instead of style
+        for genre in g_list:
+            num = genre_stats.count(genre)
+            t = (genre, num)
+            all_genres.append(t)
+        all_genres.sort(key=lambda x: x[1])
+        for i in range(len(all_genres)):
+            print(str(all_genres[i][0]) + "." * (40-len(all_genres[i][0])), end="")
+            print("{:>4} --- {:>5.2f} %".format(all_genres[i][1], (100*(all_genres[i][1]/size))))
+        print("-" * 56 + "\n" + " " * 18 + "TOTAL DECADES\n" + ("-" * 56))
+
+        # Same as above, but with decades
+        for decade in d_list:
+            num = decade_stats.count(decade)
+            t = (decade, num)
+            all_decades.append(t)
+        all_decades.sort(key=lambda x: x[1])
+        for i in range(len(all_decades)):
+            if all_decades[i][0] == "0":
+                print("n/a" + "." * 37, end="")
+            else:
+                print(str(all_decades[i][0]) + "." * (40-len(all_decades[i][0])), end="")
+            print("{:>4} --- {:5.2f} %".format(all_decades[i][1], (100*(all_decades[i][1]/size))))
 
 
 def error_check(res):
