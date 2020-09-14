@@ -1,14 +1,14 @@
 # Discogs Sorting Program
-Retrieves and sorts your Discogs collection so you can view albums by style and genre
+Retrieves and sorts your Discogs collection so you can view albums by style, genre and decade of release
 # Description
 Discogs.com is an online database where users can keep track of their record collection.
 As of 9/1/2020, Discogs's website and its API do not allow for users to sort their collections by style.
 This program will retrieve your collection from your "Uncategorized" folder and allow you to sort your collection
-by style, genre or decade.<br><br>Once a sort method is chosen, the program will return a numbered list of all the records 
-in your collection which belong to that style, genre, or decade.  Included is an option to print all of your records, 
+by style, genre and/or decade.<br><br>Once a sort method is chosen, the program will return a numbered list of all the records 
+in your collection which belong to that style, genre, and/or decade.  Included is an option to print all of your records, 
 with information about style and genre included.  The decade option can be selected in conjunction with style or genre
 to further refine your return results.<br><br>Lastly, you can print an overview of your collection, which returns
-statistical information about your collecton, broken down by style, genre and decade.
+statistical information about your collection, broken down by style, genre and decade.
   
 # Usage
 To use this program, you will need your Discogs username and an authorization token.
@@ -21,11 +21,11 @@ Once you have your token, enter the following on the command line:
 <pre>python discogsByStyle.py [user name] [token]</pre>
 ### Command Line Flags
 -h: Help.  Prints usage
-### Program COmmands
-<ul>
-<li>&nbsp;k: Prints style, genre and/or decade keys<br>
+### Program Commands
+<ul>Main Menu
+<ul><li>&nbsp;k: Prints style, genre and/or decade keys<br>
 <li>&nbsp;a: Will print all records in your collection, sorted by artist name<br>
-<li>&nbsp;o: Print your whole collection, including the number of records per style, per genre, and per decade<br>
+<li>&nbsp;o: Prints your whole collection, including the number of records per style, per genre, and per decade<br>
 <li>&nbsp;s: Returns all records in your collection that match the selected style, sorted by artist name<br>
 <li>&nbsp;g: Returns all records in your collection that match the selected genre, sorted by artist name<br>
 <li>&nbsp;d: Sorts collection by decade, then choose either to:<br>
@@ -33,11 +33,18 @@ Once you have your token, enter the following on the command line:
 <li>g: Return all records that match the chosen genre AND decade<br>
 <li>a: Return all records that match teh chosen decade</li></ul>
 <li>-h: Help - displays usage<br>
-<li>&nbsp;q: Quit</li></ul>
+<li>&nbsp;q: Quit</li></ul></ul>
+<ul>Choose Style/Genre/Decade Menu
+<ul><li>&nbsp;k: Prints style, genre, or decade keys</li>
+<li>&nbsp;-h: Help - displays usage</li>
+<li>&nbsp;m: Return to main menu</li>
+<li>&nbsp;q: Quit</li></ul></ul>
 
-# Return Format
-### Sorting by Style or Genre
-<pre>[#]. [Artist Name] - [Record Title] ([Year]) --- [List of All Genres or Styles for the Record]
+# Print Format
+### Printing by Style or Genre
+<pre>[#]. [Artist Name] - [Record Title] ([Year])
+    Styles: [Styles]
+    Genres: [Genres]
 .
 .
 -------------------------------------------------------
@@ -54,11 +61,13 @@ Total: [Total Records Returned]</pre>
 ### Printing with Decade
 <pre>
 ------------------------------[Decade]------------------------------
-[#]. [Artist Name] - [Record Title] ([Year]) --- ([List of All Genres or Styles for the Record]
+[#]. [Artist Name] - [Record Title] ([Year])
+    Styles: [Styles]
+    Genres: [Genres]
 .
 .
 --------------------------------------------------------------------
-Total: [Total Records Returned] from [Decade].  Percentage of Collection = [Percentage of Total Collection] %
+Total: [Total Records Returned] from [Decade]s.  Percentage of Collection = [Percentage of Total Collection] %
 </pre>
 ### Printing Overview
 <pre>
@@ -87,8 +96,8 @@ useful feature.<br><br>
 
 <li>Sorting categorized folders is also currently not supported, but may be implemented in the future.<br><br>
 
-<li>Not all records on Discogs have 'year' data, making records of certain eras unsortable by decade.  0 is a valid
-sort key when sorting by decade for this reason, but this is more a problem with the data set.<br><br>
+<li>Not all records on Discogs have 'year' data, making records of certain eras unsortable by decade.  This is more of a
+problem with the data set than with the program.<br><br>
 
 <li>Styles and genres must be typed exactly as they appear (including punctuation) or else no results will be returned.  
 This makes searching for longer styles and genres (.e.g "Folk, World, & Country") a little tedious.<br><br>
