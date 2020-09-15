@@ -25,7 +25,8 @@ Future implementations will include option to load from file like so:
 #### Flags
 -h: Help.  Prints usage<br>
 -r: Loads the original release dates for all of your reissues<br>
--m: Pulls data from the master releases (very time intensive due to rate limiting)<br>
+-m: Pulls data from the master releases (very time intensive due to rate limiting, but will provide most accurate
+release date information)<br>
 #### Options
 -u [--username] <user_name>: Discog's username - needed if pulling data from Discogs
 -t [--token] <token>: Token for accessing Discogs - needed if pulling data from Discogs
@@ -34,13 +35,13 @@ Future implementations will include option to load from file like so:
 <ul>Main Menu
 <ul><li>&nbsp;k: Prints style, genre and/or decade keys<br>
 <li>&nbsp;a: Will print all records in your collection, sorted by artist name<br>
-<li>&nbsp;o: Prints your whole collection, including the number of records per style, per genre, and per decade<br>
+<li>&nbsp;o: Prints a collection overview, including the number of records per style, per genre, and per decade<br>
 <li>&nbsp;s: Returns all records in your collection that match the selected style, sorted by artist name<br>
 <li>&nbsp;g: Returns all records in your collection that match the selected genre, sorted by artist name<br>
 <li>&nbsp;d: Sorts collection by decade, then choose either to:<br>
 <ul><li>s: Return all records that match the chosen style AND decade<br>
 <li>g: Return all records that match the chosen genre AND decade<br>
-<li>a: Return all records that match teh chosen decade</li></ul>
+<li>a: Return all records that match the chosen decade</li></ul>
 <li>-h: Help - displays usage<br>
 <li>e: Export/Save your loaded Discog's collection to a file for easier loading [NOT CURRENTLY IMPLEMENTED]<br>
 <li>&nbsp;q: Quit</li></ul></ul>
