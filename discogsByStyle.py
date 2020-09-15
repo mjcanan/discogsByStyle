@@ -4,7 +4,7 @@ import time
 
 
 class Record:
-    def __init__(self, a, t, g, s, y, murl):
+    def __init__(self, a, t, g, s, y, murl=''):
         self.artist = a
         self.title = t
         self.genres = g
@@ -89,7 +89,7 @@ def main(argv):
             * Enter '-h' at anytime for help.            *
             **********************************************
 
-Loading your Discogs collection now.  This may take a few seconds...''')
+Loading your Discogs collection...''')
 
     # Obtain collection from Discogs, sort by artist name, then sort genres and styles alphabetically, decades by year
     collection = get_discogs(arg_dict)
@@ -146,7 +146,7 @@ def format_out(coll, g_list, s_list, d_list, re_s):
             try:
                 master_url = coll[i]['releases'][j]['basic_information']['master_url']
             except KeyError:
-                master_url = 'n/a'
+                master_url = None
             format_list = coll[i]['releases'][j]['basic_information']['formats']
 
             rec = Record(artist, title, genres, styles, year, master_url)
@@ -252,6 +252,8 @@ def display(coll, s_list, g_list, d_list, c, size):
                     sort_type = _opt
                 elif _opt == 'k':
                     print("\ts: Sort by style\n\tg: Sort by genre\n\ta: Print all from this decade")
+                # elif _opt == e:
+                # TODO: Save file option
                 else:
                     print('''Usage:
             Enter s, g or a to select a sort method
@@ -266,8 +268,13 @@ def display(coll, s_list, g_list, d_list, c, size):
         print("-" * 56)
 
     for record in coll:
+        if record.reissue:
+            r_str = "\n    (R): " + str(record.reissue_year)
+        else:
+            r_str = ""
+
         if c == 'a' or (c == 'd' and d_opt in record.decade):
-            print(f"{count + 1}. {record.artist} - {record.title} ({record.year})\n\t" +
+            print(f"{count + 1}. {record.artist} - {record.title} ({record.year}){r_str}\n\t" +
                   f"Styles: {' | '.join(record.styles)}\n\tGenres: {' | '.join(record.genres)}")
         elif c == 'o':
             # Makes a list containing every occurrence of a style and genre in the collection
@@ -279,13 +286,13 @@ def display(coll, s_list, g_list, d_list, c, size):
         elif c in ['s', 'g'] and (_opt in record.styles or _opt in record.genres):
             if d_opt:
                 if d_opt == record.decade:
-                    print(f"{count + 1}. {record.artist} - {record.title} ({record.year})")
+                    print(f"{count + 1}. {record.artist} - {record.title} {r_str}({record.year})")
                     print(f"\tStyles: {' | '.join(record.styles)}\n\tGenres: {' | '.join(record.genres)}")
                 else:
                     count -= 1
                     pass
             else:
-                print(f"{count + 1}. {record.artist} - {record.title} ({record.year})")
+                print(f"{count + 1}. {record.artist} - {record.title} {r_str}({record.year})")
                 print(f"\tStyles: {' | '.join(record.styles)}\n\tGenres: {' | '.join(record.genres)}")
         else:
             count -= 1
@@ -343,6 +350,7 @@ def display(coll, s_list, g_list, d_list, c, size):
             else:
                 print(str(all_decades[i][0]) + "." * (40-len(all_decades[i][0])), end="")
             print("{:>4} --- {:5.2f} %".format(all_decades[i][1], (100*(all_decades[i][1]/size))))
+        print("-" * 56 + "\nFor most accurate Total Decade data, run program with -m")
 
 
 def error_check(res):
@@ -350,6 +358,8 @@ def error_check(res):
     if not(res.status_code == 200):
         print("An Error Occurred.  Please Try Again.")
         print(f"Code {res.status_code}: {res.reason}.")
+        if res.status_code == 429:
+            print("Please wait one minute before retrying")
         sys.exit(4)
 
 
@@ -403,18 +413,14 @@ def get_masters(coll, token, num_r, r, m):
         time_tup = divmod(len(coll), 60)
         wait_str = "all"
 
-    print("Loading " + wait_str + "master release dates..." +
-          "\nEstimated wait time: {0} minutes and {1} seconds".format(time_tup[0],time_tup[1]),wait_str)
+    print(f"Loading {wait_str} master release dates..." +
+          "\nEstimated wait time: {0} minutes and {1} seconds".format(time_tup[0], time_tup[1]))
 
     # TODO: make test based on rate limit headers
     # Sleep for a few seconds based on the number of previously made API calls to avoid 429 Response
-    start_sleep = int(len(coll)/100)
+    start_sleep = int(len(coll)/100 + 1)
     time.sleep(start_sleep)
     sleep_time = 1
-
-    # Optimization for smaller reissue collections
-    if num_r[0] + start_sleep < 60 and r:
-        sleep_time = 0
 
     for record in coll:
         if not record.reissue:
@@ -423,12 +429,17 @@ def get_masters(coll, token, num_r, r, m):
             elif m:
                 pass
 
-        url = record.master_url + "?token=" + token
-        if url == 'n/a':
+        if record.master_url is None:
             continue
 
+        url = record.master_url + "?token=" + token
         response = requests.get(url)
         error_check(response)
+
+        # Optimization for smaller reissue collections
+        if num_r[0] + start_sleep < int(response.headers['X-Discogs-Ratelimit-Remaining']) and r:
+            sleep_time = 0
+
         rec_dict = response.json()
         record.reissue_year = record.year
         record.year = rec_dict['year']
