@@ -18,9 +18,18 @@ You may need to sign in first.
 <br>
 Once you have your token, enter the following on the command line:
 <br>
-<pre>python discogsByStyle.py [user name] [token]</pre>
-### Command Line Flags
--h: Help.  Prints usage
+<pre>python discogsByStyle.py [-u, --username] username [-t, --token] token</pre>
+Future implementations will include option to load from file like so:
+<pre>python discogsByStyle.py [-i, --ifile] filepath</pre>
+### Command Line Arguments
+#### Flags
+-h: Help.  Prints usage<br>
+-r: Loads the original release dates for all of your reissues<br>
+-m: Pulls data from the master releases (very time intensive due to rate limiting)<br>
+#### Options
+-u [--username] <user_name>: Discog's username - needed if pulling data from Discogs
+-t [--token] <token>: Token for accessing Discogs - needed if pulling data from Discogs
+-i [--ifile] <filepath>: Input file - needed if you are loading from a saved file and not Discogs API [NOT CURRENTLY IMPLEMENTED]<br>
 ### Program Commands
 <ul>Main Menu
 <ul><li>&nbsp;k: Prints style, genre and/or decade keys<br>
@@ -33,6 +42,7 @@ Once you have your token, enter the following on the command line:
 <li>g: Return all records that match the chosen genre AND decade<br>
 <li>a: Return all records that match teh chosen decade</li></ul>
 <li>-h: Help - displays usage<br>
+<li>e: Export/Save your loaded Discog's collection to a file for easier loading [NOT CURRENTLY IMPLEMENTED]<br>
 <li>&nbsp;q: Quit</li></ul></ul>
 <ul>Choose Style/Genre/Decade Menu
 <ul><li>&nbsp;k: Prints style, genre, or decade keys</li>
@@ -92,25 +102,14 @@ Total: [Total Records Returned] from [Decade]s.  Percentage of Collection = [Per
 </pre>
 # Limitations
 <ul><li>Printing all records while sorting by style and genre is currently not supported, although I'm not sure that would be a 
-useful feature.<br><br>
-
-<li>Sorting categorized folders is also currently not supported, but may be implemented in the future.<br><br>
-
-<li>Discogs dates the records in your collection based on the year the particular version of the album was released.
- Thus, the "year" field does not reliably return accurate information about the year the album was originally released 
- (if the record in your collection is a reissue, Discogs will store the year that the reissue came out as the album's
-    release year).  This makes this program an unreliable method for sorting records by decade.  
-    <ul>This could be corrected by obtaining the master_id (if available) and making a separate call to the API, but
-    Discogs throttles calls to 60 per minute at the most.  This would greatly increase the program's runtime and make it
-    nearly unusable in its current implementation.
-    </ul><br>
-
-<li>Not all records on Discogs have 'year' data, making records of certain eras unsortable by decade.  This is more of a
-problem with the data set than with the program.<br><br>
-
+useful feature.</li>
+<li>Sorting categorized folders is also currently not supported, but may be implemented in the future.</li>
+<li>Single call to API for user's collection doesn't necessarily return accurate dates for album releases.</li>
+<li>Some albums have year value of '0', and other albums have reissue release date and not master release dates.  This is 
+solved using -r or -m flags, performance suffers if you have a large collection of reissues or use -m due to rate 
+limiting (60 calls per minute).</li>
 <li>Styles and genres must be typed exactly as they appear (including punctuation) or else no results will be returned.  
-This makes searching for longer styles and genres (.e.g "Folk, World, & Country") a little tedious.<br><br>
-
+This makes searching for longer styles and genres (.e.g "Folk, World, & Country") a little tedious.</li>
 <li>A token must be obtained before using this program, and only your personal collection can be viewed. Discogs supports
 OAuth, but requires additional steps to register and use the service.  Since the purpose of this app is to sort and view
 your own collection and not the collection of others, it was easier to implement with a token for personal use than to
