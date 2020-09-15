@@ -57,14 +57,16 @@ def main(argv):
                     
                 An authentication token is needed to use this program
                 Find a token here: https://www.discogs.com/settings/developers
-                You may need to sign in to your DISCOGS account first
+                You may need to sign in to your Discogs account first
+                
+                Quickstart: discogsByStyle -u <your username here> -t <your token here>
                     
             Flags and Options:
-                -u or --username : your DISCOGS username should be entered here
-                -t or --token    : load collection from DISCOGS using your authentication token
+                -u or --username : your Discogs username should be entered here
+                -t or --token    : load collection from Discogs using your authentication token
                 -i or --ifile    : load collection from a saved file
-                -r or --reissue  : load data from your reissues' masters on DISCOGS
-                -m or --master   : load data from all your albums' masters on DISCOGS
+                -r or --reissue  : load data from your reissues' masters on Discogs
+                -m or --master   : load data from all your albums' masters on Discogs
                     !!! Masters can only be retrieved at a rate of 1 per second.!!!
                     !!! For larger collections with lots of reissues, loading   !!!
                     !!! from masters may take several minutes.  Loading from    !!!
@@ -86,7 +88,7 @@ def main(argv):
 
     print('''
             ********************DISCOGS SORTER**********************
-            * This app will sort your DISCOGS collection by style, *
+            * This app will sort your Discogs collection by style, *
             * by style, genre and/or decade.  View the records in  *
             * your collection that match the selected style or     *
             * genre, with options to further sort by decade, or    *
@@ -131,8 +133,8 @@ Loading your Discogs collection...''')
                 s: Return all records that match the chosen style AND decade
                 g: Return all records that match the chose genre AND decade, or
                 a: Print all records in your collection from that decade (xxx0 - xxxx9)
-                    NOTE:   not all records in Discogs have year information.  For those records that don't
-                            have a year, the year will either appear as '0' or 'n/a' 
+                    NOTE:   not all records in Discogss have year information.  For those records that don't
+                            have a year, the year may appear as '0' or 'n/a' 
             q: Quit''')
             # e: Export/Save your collection to a file
         else:
