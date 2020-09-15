@@ -1,10 +1,11 @@
 import requests
-import sys, getopt
+import sys
+import getopt
 import time
 
 
 class Record:
-    def __init__(self, a, t, g, s, y, murl=''):
+    def __init__(self, a, t, g, s, y, murl):
         self.artist = a
         self.title = t
         self.genres = g
@@ -23,6 +24,7 @@ class Record:
 
 
 def main(argv):
+
     genre_list = []
     style_list = []
     decade_list = []
@@ -83,11 +85,17 @@ def main(argv):
             master = True
 
     print('''
-            ***************DISCOGS SORTER*****************
-            * This app will sort your discogs collection *
-            * by style, genre and/or decade.             *
-            * Enter '-h' at anytime for help.            *
-            **********************************************
+            ********************DISCOGS SORTER**********************
+            * This app will sort your DISCOGS collection by style, *
+            * by style, genre and/or decade.  View the records in  *
+            * your collection that match the selected style or     *
+            * genre, with options to further sort by decade, or    *
+            * output an overview of your entire collection with    *
+            * statistical data. Run with -r or -m flags for more   *
+            * accurate and most accurate release date information, *
+            * respectively (runtime greatly increases with -m flag)*
+            * Enter '-h' at anytime for help.                      *
+            ********************************************************
 
 Loading your Discogs collection...''')
 
@@ -109,14 +117,14 @@ Loading your Discogs collection...''')
         if cmd == 'k':
             display_keys(style_list, genre_list, decade_list)
         elif cmd in ['s', 'g', 'a', 'o', 'd']:
-            display(f_collection, style_list, genre_list, decade_list, cmd, coll_size)
+            display(f_collection, style_list, genre_list, decade_list, cmd, coll_size, reissues, master)
         elif cmd == 'q':
             sys.exit()
         elif cmd == '-h':
             print('''Usage:
             k: Print style, genre, and/or decade sort keys
             a: Print all records in your collection, sorted by artist name
-            o: Print your whole collection, with number of records per style, genre, and decade, sorted by total records
+            o: Print a collection overview, with number of records per style, genre, and decade, sorted by total records
             s: Return all records in your collection that match a chosen style, sorted by artist name
             g: Return all records in your collection that match a chosen genre, sorted by artist name
             d: Sorts collection by decade, then choose to either to:
@@ -132,6 +140,7 @@ Loading your Discogs collection...''')
 
 
 def format_out(coll, g_list, s_list, d_list, re_s):
+
     records = []
     count = 0
 
@@ -177,6 +186,7 @@ def format_out(coll, g_list, s_list, d_list, re_s):
 
 
 def display_keys(s_list, g_list, d_list):
+
     if s_list:
         print(f"Style Keys: {' | '.join(s_list)}\n")
     if g_list:
@@ -185,8 +195,10 @@ def display_keys(s_list, g_list, d_list):
         print(f"Decade Keys: {' | '.join(d_list)}\n")
 
 
-def display(coll, s_list, g_list, d_list, c, size):
+def display(coll, s_list, g_list, d_list, c, size, r, m):
+
     _opt = ""
+    sort_str = ""
     d_opt = 0
     count = 0
     style_stats = []
@@ -268,7 +280,7 @@ def display(coll, s_list, g_list, d_list, c, size):
         print("-" * 56)
 
     for record in coll:
-        if record.reissue:
+        if record.reissue and (r or m):
             r_str = "\n    (R): " + str(record.reissue_year)
         else:
             r_str = ""
@@ -286,13 +298,13 @@ def display(coll, s_list, g_list, d_list, c, size):
         elif c in ['s', 'g'] and (_opt in record.styles or _opt in record.genres):
             if d_opt:
                 if d_opt == record.decade:
-                    print(f"{count + 1}. {record.artist} - {record.title} {r_str}({record.year})")
+                    print(f"{count + 1}. {record.artist} - {record.title} ({record.year}){r_str}")
                     print(f"\tStyles: {' | '.join(record.styles)}\n\tGenres: {' | '.join(record.genres)}")
                 else:
                     count -= 1
                     pass
             else:
-                print(f"{count + 1}. {record.artist} - {record.title} {r_str}({record.year})")
+                print(f"{count + 1}. {record.artist} - {record.title} ({record.year}){r_str}")
                 print(f"\tStyles: {' | '.join(record.styles)}\n\tGenres: {' | '.join(record.genres)}")
         else:
             count -= 1
@@ -404,6 +416,9 @@ def get_discogs(arg_d):
 
 
 def get_masters(coll, token, num_r, r, m):
+
+    wait_str = ""
+    time_tup = ()
 
     # Estimated wait time based on number of reissues
     if r:
