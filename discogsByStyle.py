@@ -1,14 +1,18 @@
 import requests
-import sys
+import sys, getopt
+import time
 
 
 class Record:
-    def __init__(self, a, t, g, s, y):
+    def __init__(self, a, t, g, s, y, murl):
         self.artist = a
         self.title = t
         self.genres = g
         self.styles = s
         self.year = y
+        self.master_url = murl
+        self.reissue_year = 0
+        self.reissue = False
         self.decade = self.__decade__(y)
 
     def __decade__(self, year):
@@ -18,16 +22,65 @@ class Record:
             return str(year - (year % 10))
 
 
-def main():
+def main(argv):
     genre_list = []
     style_list = []
     decade_list = []
+    reissue_num = [0]
     coll_size = 0
+    master = False
+    reissues = False
+    arg_dict = {}
 
-    # Error Check for proper command line inputs
-    if len(sys.argv) != 3 or "-h" in sys.argv:
-        print("Usage: discogsByStyle.py <username> <token>\nFind a token here: discogs.com/settings/developers")
-        sys.exit()
+    # Error check for proper command line inputs
+    if not argv:
+        print('''Usage: 
+                discogsByStyle.py -u <username> [-t <token>] [-i <filepath>] [-r] [-m]
+                Find a token here: discogs.com/settings/developers''')
+        sys.exit(3)
+    try:
+        opts, args = getopt.getopt(argv, 'hu:i:t:rm', ['username=', 'token=', 'ifile=', 'reissue','master'])
+    except getopt.GetoptError:
+        print('Invalid input.  Enter -h for usage.')
+        sys.exit(2)
+
+    if not opts:
+        print("Invalid input.  Enter -h for usage.")
+        sys.exit(2)
+
+    for opt, arg in opts:
+        if opt == '-h' or len(argv) == 1:
+            print('''           Usage: 
+                discogsByStyle.py -u <username> [<-t token>] [-i --ifile filepath] [-m --master]
+                    
+                An authentication token is needed to use this program
+                Find a token here: https://www.discogs.com/settings/developers
+                You may need to sign in to your DISCOGS account first
+                    
+            Flags and Options:
+                -u or --username : your DISCOGS username should be entered here
+                -t or --token    : load collection from DISCOGS using your authentication token
+                -i or --ifile    : load collection from a saved file
+                -r or --reissue  : load data from your reissues' masters on DISCOGS
+                -m or --master   : load data from all your albums' masters on DISCOGS
+                    !!! Masters can only be retrieved at a rate of 1 per second.!!!
+                    !!! For larger collections with lots of reissues, loading   !!!
+                    !!! from masters may take several minutes.  Loading from    !!!
+                    !!! masters is only needed if you want to retrieve original !!! 
+                    !!! release dates for your reissues. Otherwise, the year    !!!
+                    !!! information for your albums will be the year your       !!!
+                    !!! particular pressing was released.                       !!!''')
+            sys.exit()
+        elif opt in ['-t', '--token']:
+            arg_dict['token'] = arg
+        elif opt in ['-u', '--username']:
+            arg_dict['username'] = arg
+        elif opt in ['-i', '--ifile']:
+            arg_dict['inputfile'] = arg
+        elif opt in ['-r', '--reissue']:
+            reissues = True
+        elif opt in ['-m', '--master']:
+            master = True
 
     print('''
             ***************DISCOGS SORTER*****************
@@ -39,9 +92,11 @@ def main():
 Loading your Discogs collection now.  This may take a few seconds...''')
 
     # Obtain collection from Discogs, sort by artist name, then sort genres and styles alphabetically, decades by year
-    collection = get_vinyl(sys.argv)
-    f_collection = format_out(collection, genre_list, style_list, decade_list)
+    collection = get_discogs(arg_dict)
+    f_collection = format_out(collection, genre_list, style_list, decade_list, reissue_num)
     f_collection.sort(key=lambda x: x.artist)
+    if master or reissues:
+        get_masters(f_collection, arg_dict['token'], reissue_num, reissues, master)
     coll_size = len(f_collection)
 
     genre_list.sort()
@@ -69,14 +124,16 @@ Loading your Discogs collection now.  This may take a few seconds...''')
                 g: Return all records that match the chose genre AND decade, or
                 a: Print all records in your collection from that decade (xxx0 - xxxx9)
                     NOTE:   not all records in Discogs have year information.  For those records that don't
-                            have a year, the year will either appear as '0' or 'n/a'
+                            have a year, the year will either appear as '0' or 'n/a' 
             q: Quit''')
+            # e: Export/Save your collection to a file
         else:
             print("Invalid command.  Enter -h for help")
 
 
-def format_out(coll, g_list, s_list, d_list):
+def format_out(coll, g_list, s_list, d_list, re_s):
     records = []
+    count = 0
 
     # Create a list of Record objects containing relevant data from Discogs API calls
     for i in range(len(coll)):
@@ -86,8 +143,24 @@ def format_out(coll, g_list, s_list, d_list):
             genres = coll[i]['releases'][j]['basic_information']['genres']
             styles = coll[i]['releases'][j]['basic_information']['styles']
             year = coll[i]['releases'][j]['basic_information']['year']
+            try:
+                master_url = coll[i]['releases'][j]['basic_information']['master_url']
+            except KeyError:
+                master_url = 'n/a'
+            format_list = coll[i]['releases'][j]['basic_information']['formats']
 
-            rec = Record(artist, title, genres, styles, year)
+            rec = Record(artist, title, genres, styles, year, master_url)
+
+            for f in range(len(format_list)):
+                try:
+                    if 'Reissue' in format_list[f]['descriptions']:
+                        rec.reissue = True
+                        count += 1
+                        re_s[0] = count
+
+                except KeyError:
+                    # box sets include a format which does not contain a 'descriptions' tag
+                    pass
             records.append(rec)
 
             # Initializing key lists
@@ -277,38 +350,91 @@ def error_check(res):
     if not(res.status_code == 200):
         print("An Error Occurred.  Please Try Again.")
         print(f"Code {res.status_code}: {res.reason}.")
-        sys.exit()
+        sys.exit(4)
 
 
-def get_vinyl(arg_list):
+def get_discogs(arg_d):
 
     # TODO: allow for selection of private folders - current implementation only selects Uncategorized folder
     col_list = []
-    url = ("https://api.discogs.com/users/" + arg_list[1] + "/collection/folders/1/releases?token=" + arg_list[2] +
-           "&per_page=100")
+    try:
+        url = ("https://api.discogs.com/users/" + arg_d['username'] + "/collection/folders/1/releases?token=" +
+               arg_d['token'] + "&per_page=100")
 
-    response = requests.get(url)
-    error_check(response)
-
-    col_dict = response.json()
-    col_list.append(col_dict)
-    page_num = col_dict['pagination']['pages']
-
-    # Discogs only returns max 100 entries per call - make multiple calls based on number of pages
-    for i in range(page_num-1):
-        try:
-            # Discogs API provides direct link to next page
-            col_next = col_dict['pagination']['urls']['next']
-        except KeyError:
-            print("last page")
-            break
-        response = requests.get(col_next)
+        response = requests.get(url)
         error_check(response)
+
         col_dict = response.json()
         col_list.append(col_dict)
+        page_num = col_dict['pagination']['pages']
 
-    return col_list
+        # Discogs only returns max 100 entries per call - make multiple calls based on number of pages
+        for i in range(page_num - 1):
+            try:
+                # Discogs API provides direct link to next page
+                col_next = col_dict['pagination']['urls']['next']
+            except KeyError:
+                print("last page")
+                break
+            response = requests.get(col_next)
+            error_check(response)
+            col_dict = response.json()
+            col_list.append(col_dict)
+
+        return col_list
+
+    except KeyError:
+        try:
+
+            #TODO Load file to collection
+            pass
+        except KeyError:
+            print("Something went wrong.  Exiting")
+            sys.exit(1)
+
+
+def get_masters(coll, token, num_r, r, m):
+
+    # Estimated wait time based on number of reissues
+    if r:
+        time_tup = divmod(num_r[0], 60)
+        wait_str = "reissues'"
+    elif m:
+        time_tup = divmod(len(coll), 60)
+        wait_str = "all"
+
+    print("Loading " + wait_str + "master release dates..." +
+          "\nEstimated wait time: {0} minutes and {1} seconds".format(time_tup[0],time_tup[1]),wait_str)
+
+    # TODO: make test based on rate limit headers
+    # Sleep for a few seconds based on the number of previously made API calls to avoid 429 Response
+    start_sleep = int(len(coll)/100)
+    time.sleep(start_sleep)
+    sleep_time = 1
+
+    # Optimization for smaller reissue collections
+    if num_r[0] + start_sleep < 60 and r:
+        sleep_time = 0
+
+    for record in coll:
+        if not record.reissue:
+            if r:
+                continue
+            elif m:
+                pass
+
+        url = record.master_url + "?token=" + token
+        if url == 'n/a':
+            continue
+
+        response = requests.get(url)
+        error_check(response)
+        rec_dict = response.json()
+        record.reissue_year = record.year
+        record.year = rec_dict['year']
+        record.decade = record.__decade__(record.year)
+        time.sleep(sleep_time)
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
