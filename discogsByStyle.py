@@ -2,6 +2,7 @@ import requests
 import sys
 import getopt
 import time
+import json
 
 
 class Record:
@@ -32,6 +33,7 @@ def main(argv):
     coll_size = 0
     master = False
     reissues = False
+    from_file = False
     arg_dict = {}
 
     # Error check for proper command line inputs
@@ -41,7 +43,7 @@ def main(argv):
                 Find a token here: discogs.com/settings/developers''')
         sys.exit(3)
     try:
-        opts, args = getopt.getopt(argv, 'hu:i:t:rm', ['username=', 'token=', 'ifile=', 'reissue','master'])
+        opts, args = getopt.getopt(argv, 'hu:i:t:rm', ['username=', 'token=', 'ifile=', 'reissue', 'master'])
     except getopt.GetoptError:
         print('Invalid input.  Enter -h for usage.')
         sys.exit(2)
@@ -81,6 +83,7 @@ def main(argv):
             arg_dict['username'] = arg
         elif opt in ['-i', '--ifile']:
             arg_dict['inputfile'] = arg
+            from_file = True
         elif opt in ['-r', '--reissue']:
             reissues = True
         elif opt in ['-m', '--master']:
@@ -103,7 +106,7 @@ Loading your Discogs collection...''')
 
     # Obtain collection from Discogs, sort by artist name, then sort genres and styles alphabetically, decades by year
     collection = get_discogs(arg_dict)
-    f_collection = format_out(collection, genre_list, style_list, decade_list, reissue_num)
+    f_collection = format_discogs(collection, genre_list, style_list, decade_list, reissue_num, from_file)
     f_collection.sort(key=lambda x: x.artist)
     if master or reissues:
         get_masters(f_collection, arg_dict['token'], reissue_num, reissues, master)
@@ -119,7 +122,7 @@ Loading your Discogs collection...''')
         if cmd == 'k':
             display_keys(style_list, genre_list, decade_list)
         elif cmd in ['s', 'g', 'a', 'o', 'd']:
-            display(f_collection, style_list, genre_list, decade_list, cmd, coll_size, reissues, master)
+            display(f_collection, style_list, genre_list, decade_list, cmd, coll_size, reissues, master, from_file)
         elif cmd == 'q':
             sys.exit()
         elif cmd == '-h':
@@ -135,56 +138,75 @@ Loading your Discogs collection...''')
                 a: Print all records in your collection from that decade (xxx0 - xxxx9)
                     NOTE:   not all records in Discogss have year information.  For those records that don't
                             have a year, the year may appear as '0' or 'n/a' 
+            e: Export/Save your collection to a file
             q: Quit''')
-            # e: Export/Save your collection to a file
+        elif cmd == 'e':
+            json_file(f_collection)
+            print(f"Saved {len(f_collection)} records to my_discogs_col.json")
         else:
             print("Invalid command.  Enter -h for help")
 
 
-def format_out(coll, g_list, s_list, d_list, re_s):
+def format_discogs(coll, g_list, s_list, d_list, re_s, f_file):
 
     records = []
-    count = 0
 
     # Create a list of Record objects containing relevant data from Discogs API calls
-    for i in range(len(coll)):
-        for j in range(len(coll[i]['releases'])):
-            title = coll[i]['releases'][j]['basic_information']['title']
-            artist = coll[i]['releases'][j]['basic_information']['artists'][0]['name']
-            genres = coll[i]['releases'][j]['basic_information']['genres']
-            styles = coll[i]['releases'][j]['basic_information']['styles']
-            year = coll[i]['releases'][j]['basic_information']['year']
-            try:
-                master_url = coll[i]['releases'][j]['basic_information']['master_url']
-            except KeyError:
-                master_url = None
-            format_list = coll[i]['releases'][j]['basic_information']['formats']
+    if not f_file:
+        for i in range(len(coll)):
+            for j in range(len(coll[i]['releases'])):
+                title = coll[i]['releases'][j]['basic_information']['title']
+                artist = coll[i]['releases'][j]['basic_information']['artists'][0]['name']
+                genres = coll[i]['releases'][j]['basic_information']['genres']
+                styles = coll[i]['releases'][j]['basic_information']['styles']
+                year = coll[i]['releases'][j]['basic_information']['year']
+                try:
+                    master_url = coll[i]['releases'][j]['basic_information']['master_url']
+                except KeyError:
+                    master_url = None
+                format_list = coll[i]['releases'][j]['basic_information']['formats']
+
+                rec = Record(artist, title, genres, styles, year, master_url)
+
+                for f in range(len(format_list)):
+                    try:
+                        if 'Reissue' in format_list[f]['descriptions']:
+                            rec.reissue = True
+                            re_s[0] += 1
+                    except KeyError:
+                        # box sets include a format which does not contain a 'descriptions' tag
+                        pass
+
+                records.append(rec)
+                initialize_lists(s_list, g_list, d_list, rec)
+    else:
+        for i in range(len(coll)):
+            title = coll[i]['title']
+            artist = coll[i]['artist']
+            genres = coll[i]['genres']
+            styles = coll[i]['styles']
+            year = coll[i]['year']
+            master_url = coll[i]['master_url']
 
             rec = Record(artist, title, genres, styles, year, master_url)
-
-            for f in range(len(format_list)):
-                try:
-                    if 'Reissue' in format_list[f]['descriptions']:
-                        rec.reissue = True
-                        count += 1
-                        re_s[0] = count
-
-                except KeyError:
-                    # box sets include a format which does not contain a 'descriptions' tag
-                    pass
+            rec.reissue_year = coll[i]['reissue_year']
+            rec.reissue = coll[i]['reissue']
             records.append(rec)
-
-            # Initializing key lists
-            for s in styles:
-                if not(s in s_list):
-                    s_list.append(s)
-            for g in genres:
-                if not(g in g_list):
-                    g_list.append(g)
-            if not (rec.decade in d_list):
-                d_list.append(rec.decade)
+            initialize_lists(s_list, g_list, d_list, rec)
 
     return records
+
+
+def initialize_lists(sl, gl, dl, rcd):
+    # Initializing key lists
+    for s in rcd.styles:
+        if not(s in sl):
+            sl.append(s)
+    for g in rcd.genres:
+        if not(g in gl):
+            gl.append(g)
+    if not (rcd.decade in dl):
+        dl.append(rcd.decade)
 
 
 def display_keys(s_list, g_list, d_list):
@@ -197,7 +219,7 @@ def display_keys(s_list, g_list, d_list):
         print(f"Decade Keys: {' | '.join(d_list)}\n")
 
 
-def display(coll, s_list, g_list, d_list, c, size, r, m):
+def display(coll, s_list, g_list, d_list, c, size, r, m, ff):
 
     _opt = ""
     sort_str = ""
@@ -239,6 +261,9 @@ def display(coll, s_list, g_list, d_list, c, size, r, m):
             continue
         elif _opt.lower() == 'q':
             sys.exit()
+        elif _opt.lower() == 'e':
+            json_file(coll)
+            print(f"Save {size} records to my_discogs_col.json")
         elif _opt.lower() == 'm':
             return
 
@@ -266,13 +291,15 @@ def display(coll, s_list, g_list, d_list, c, size, r, m):
                     sort_type = _opt
                 elif _opt == 'k':
                     print("\ts: Sort by style\n\tg: Sort by genre\n\ta: Print all from this decade")
-                # elif _opt == e:
-                # TODO: Save file option
+                elif _opt == 'e':
+                    json_file(coll)
+                    print(f"Saved {size} records to my_discogs_col.json.")
                 else:
                     print('''Usage:
             Enter s, g or a to select a sort method
             Press k to get keys
             Press m to return to the main menu
+            Press e to save collection to file
             Press q to quit.''')
 
     # Print records to screen in easy to read format
@@ -282,7 +309,7 @@ def display(coll, s_list, g_list, d_list, c, size, r, m):
         print("-" * 56)
 
     for record in coll:
-        if record.reissue and (r or m):
+        if record.reissue and (r or m or ff):
             r_str = "\n    (R): " + str(record.reissue_year)
         else:
             r_str = ""
@@ -292,6 +319,7 @@ def display(coll, s_list, g_list, d_list, c, size, r, m):
                   f"Styles: {' | '.join(record.styles)}\n\tGenres: {' | '.join(record.genres)}")
         elif c == 'o':
             # Makes a list containing every occurrence of a style and genre in the collection
+            # TODO: move stat collection to separate function?
             for style in record.styles:
                 style_stats.append(style)
             for genre in record.genres:
@@ -374,6 +402,8 @@ def error_check(res):
         print(f"Code {res.status_code}: {res.reason}.")
         if res.status_code == 429:
             print("Please wait one minute before retrying")
+        elif res.status_code == 401:
+            print("Please enter a valid token")
         sys.exit(4)
 
 
@@ -409,9 +439,8 @@ def get_discogs(arg_d):
 
     except KeyError:
         try:
-
-            #TODO Load file to collection
-            pass
+            col_list = json_file(0, arg_d['inputfile'])
+            return col_list
         except KeyError:
             print("Something went wrong.  Exiting")
             sys.exit(1)
@@ -423,17 +452,17 @@ def get_masters(coll, token, num_r, r, m):
     time_tup = ()
 
     # Estimated wait time based on number of reissues
-    if r:
-        time_tup = divmod(num_r[0], 60)
-        wait_str = "reissues'"
-    elif m:
-        time_tup = divmod(len(coll), 60)
-        wait_str = "all"
+    if __name__ == "__main__":
+        if r:
+            time_tup = divmod(num_r[0], 60)
+            wait_str = "reissues'"
+        elif m:
+            time_tup = divmod(len(coll), 60)
+            wait_str = "all"
 
-    print(f"Loading {wait_str} master release dates..." +
-          "\nEstimated wait time: {0} minutes and {1} seconds".format(time_tup[0], time_tup[1]))
+        print(f"Loading {wait_str} master release dates..." +
+              "\nEstimated wait time: {0} minutes and {1} seconds".format(time_tup[0], time_tup[1]))
 
-    # TODO: make test based on rate limit headers
     # Sleep for a few seconds based on the number of previously made API calls to avoid 429 Response
     start_sleep = int(len(coll)/100 + 1)
     time.sleep(start_sleep)
@@ -458,10 +487,32 @@ def get_masters(coll, token, num_r, r, m):
             sleep_time = 0
 
         rec_dict = response.json()
-        record.reissue_year = record.year
-        record.year = rec_dict['year']
+
+        if not record.reissue:
+            record.year = rec_dict['year']
+        else:
+            record.reissue_year = record.year
+            record.year = rec_dict['year']
+
         record.decade = record.__decade__(record.year)
         time.sleep(sleep_time)
+
+
+def json_file(coll, f_in=0):
+    j_list = []
+
+    if not f_in:
+        for r in coll:
+            j_list.append(vars(r))
+        with open('my_discogs_col.json', 'w') as fout:
+            json.dump(j_list, fout)
+    else:
+        with open(f_in, 'r') as read_file:
+            coll_data = json.load(read_file)
+        return coll_data
+
+    # TODO: re_load function to update file without full call to get_master? Make normal api call,
+    #  compare names, make calls if needed or delete if not present
 
 
 if __name__ == "__main__":
