@@ -19,8 +19,10 @@ You may need to sign in first.
 Once you have your token, enter the following on the command line:
 <br>
 <pre>python discogsByStyle.py [-u, --username] username [-t, --token] token</pre>
-Future implementations will include option to load from file like so:
-<pre>python discogsByStyle.py [-i, --ifile] filepath</pre>
+You can save your collection to a file and load from that in future (which is significantly faster), with the following
+command:
+<pre>python discogsByStyle.py [-i, --ifile] my_discogs_col.json </pre>
+The program will save your collection in your pwd as a JSON file.
 ### Command Line Arguments
 #### Flags
 -h: Help.  Prints usage<br>
@@ -43,17 +45,19 @@ release date information)<br>
 <li>g: Return all records that match the chosen genre AND decade<br>
 <li>a: Return all records that match the chosen decade</li></ul>
 <li>-h: Help - displays usage<br>
-<li>e: Export/Save your loaded Discog's collection to a file for easier loading [NOT CURRENTLY IMPLEMENTED]<br>
+<li>e: Export/Save your loaded Discog's collection to a file for easier loading in the future<br>
 <li>&nbsp;q: Quit</li></ul></ul>
 <ul>Choose Style/Genre/Decade Menu
 <ul><li>&nbsp;k: Prints style, genre, or decade keys</li>
 <li>&nbsp;-h: Help - displays usage</li>
 <li>&nbsp;m: Return to main menu</li>
+<li> e: Export/Save file</li>
 <li>&nbsp;q: Quit</li></ul></ul>
 
 # Print Format
 ### Printing by Style or Genre
-<pre>[#]. [Artist Name] - [Record Title] ([Year])
+<pre>[#]. [Artist Name] - [Record Title] ([Year of Your Pressing (or Master if -r/-m)])
+    [(R): [Year Your Pressing Was Issued] -- only if -r or -m flag used]
     Styles: [Styles]
     Genres: [Genres]
 .
@@ -62,7 +66,8 @@ release date information)<br>
 Total: [Total Records Returned]. Percentage of Collection = [Percentage of Total Collection] %
 </pre>
 ### Printing All
-<pre>[#]. [Artist Name] - [Record Title] ([Year])
+<pre>[#]. [Artist Name] - [Record Title] ([Year of Your Pressing (or Master if -r/-m)])
+    [(R): [Year Your Pressing Was Issued] -- only if -r or -m flag was used]
     Styles: [Styles]
     Genres: [Genres]
 .
@@ -72,7 +77,8 @@ Total: [Total Records Returned]</pre>
 ### Printing with Decade
 <pre>
 ------------------------------[Decade]------------------------------
-[#]. [Artist Name] - [Record Title] ([Year])
+[#]. [Artist Name] - [Record Title] ([Year of Your Pressing (or Master if -r/-m)])
+    [(R): [Year Your Pressing Was Issued] -- only if -r or -m flag used]
     Styles: [Styles]
     Genres: [Genres]
 .
@@ -99,8 +105,7 @@ Total: [Total Records Returned] from [Decade]s.  Percentage of Collection = [Per
 [Decade]...........[Number of Records] --- [% of Collection]
 .
 .
-                      
-</pre>
+For most accurate Total Decade data, run program with -m</pre>
 # Limitations
 <ul><li>Printing all records while sorting by style and genre is currently not supported, although I'm not sure that would be a 
 useful feature.</li>
