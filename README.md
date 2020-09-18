@@ -3,7 +3,7 @@ Retrieves and sorts your Discogs collection so you can view albums by style, gen
 # Description
 Discogs.com is an online database where users can keep track of their record collection.
 As of 9/1/2020, Discogs's website and its API do not allow for users to sort their collections by style.
-This program will retrieve your collection from your "Uncategorized" folder and allow you to sort your collection
+This program will retrieve your collection from your "All" folder and allow you to sort your collection
 by style, genre and/or decade.<br><br>Once a sort method is chosen, the program will return a numbered list of all the records 
 in your collection which belong to that style, genre, and/or decade.  Included is an option to print all of your records, 
 with information about style and genre included.  The decade option can be selected in conjunction with style or genre
@@ -52,6 +52,7 @@ release date information)<br>
 <li>&nbsp;-h: Help - displays usage</li>
 <li>&nbsp;m: Return to main menu</li>
 <li> e: Export/Save file</li>
+<li> u: Update a collection loaded from a file with latest data from Discogs</li>
 <li>&nbsp;q: Quit</li></ul></ul>
 
 # Print Format
@@ -121,3 +122,12 @@ OAuth, but requires additional steps to register and use the service.  Since the
 your own collection and not the collection of others, it was easier to implement with a token for personal use than to
 go through the trouble of registering and rewriting the program.  Nothing is written in stone, however, so this may 
 change in a future version.</li></ul>
+
+# Features to Add/Revise
+[ ] Load from file while running program<br>
+[ ] Allow users to choose sort keys<br>
+[ ] Filter function to allow sorting by multiple styles/genres/decades<br>
+[ ] Allow users to choose Discogs folder<br>
+[ ] User selected file names<br>
+[ ] Optimize sorting and searching in update function<br>
+[ ] Improve key display<br>
