@@ -14,6 +14,7 @@ class Record:
         self.year = y
         self.master_url = murl
         self.instance_id = iid
+        #self.label = l
         self.reissue_year = 0
         self.reissue = False
         self.decade = self.__decade__(y)
@@ -26,14 +27,10 @@ class Record:
 
 
 def main(argv):
-
-    genre_list = []
-    style_list = []
-    decade_list = []
-    reissue_num = [0]
     master = False
     reissues = False
     from_file = False
+    folders = False
     arg_dict = {}
     usage = '''           Usage: 
                 discogsByStyle.py -u <username> [<-t token>] [-i --ifile filepath] [-m --master] [-r --reissue]'''
@@ -89,6 +86,8 @@ def main(argv):
             reissues = True
         elif opt in ['-m', '--master']:
             master = True
+        #elif opt in ['-f', '--folders']:
+        #    folders = True
 
     print('''
             ********************DISCOGS SORTER**********************
@@ -105,8 +104,13 @@ def main(argv):
 
 Loading your Discogs collection...''')
 
+    genre_list = []
+    style_list = []
+    decade_list = []
+    reissue_num = [0]
+
     # Obtain collection from Discogs, sort by artist name, then sort genres and styles alphabetically, decades by year
-    collection = get_discogs(arg_dict, from_file)
+    collection = get_discogs(arg_dict, from_file, folders)
     f_collection = format_discogs(collection, genre_list, style_list, decade_list, reissue_num, from_file)
     f_collection[1].sort(key=lambda x: x.artist)
     if master or reissues:
@@ -430,7 +434,7 @@ def error_check(res):
     return 0
 
 
-def get_discogs(arg_d, ff):
+def get_discogs(arg_d, ff, pick_folder=True):
     col_list = []
 
     if ff:
@@ -438,8 +442,29 @@ def get_discogs(arg_d, ff):
         return col_list
     else:
         try:
-            url = ("https://api.discogs.com/users/" + arg_d['username'] + "/collection/folders/0/releases?token=" +
-               arg_d['token'] + "&per_page=100")
+            url = f"https://api.discogs.com/users/{arg_d.username}/collection/folders"
+
+            if pick_folder:
+                folder_ids = []
+                folder_opt = ""
+
+                response = requests.get(url)
+                error_check(response)
+                folder_dict = response.json
+                for folder in folder_dict['folders']:
+                    folder_ids.append(folder.id)
+                if __name__ == '__main__':
+                    while folder_opt not in folder_ids:
+                        print("Choose Folder:")
+                        for folder in folder_dict['folders']:
+                            print(f"For {folder.name}, enter {folder.id}")
+                        folder_opt = input("")
+            else:
+                folder_opt = "0"
+
+            url += f"/{folder_opt}/releases?token={arg_d.token}&per_page=100"
+            #url = ("https://api.discogs.com/users/" + arg_d['username'] + "/collection/folders/0/releases?token=" +
+            #   arg_d['token'] + "&per_page=100")
 
             response = requests.get(url)
             error_check(response)
@@ -454,7 +479,7 @@ def get_discogs(arg_d, ff):
                     # Discogs API provides direct link to next page
                     col_next = col_dict['pagination']['urls']['next']
                 except KeyError:
-                    print("last page")
+                    #Last page won't have next url
                     break
                 response = requests.get(col_next)
                 error_check(response)
@@ -535,9 +560,11 @@ def json_file(coll, f_in=0):
         for r in coll[1]:
             j_list.append(vars(r))
         j_out.append(j_list)
+        # TODO: let user choose file name
         with open('my_discogs_col.json', 'w') as fout:
             json.dump(j_out, fout)
     else:
+        # TODO: let user choose file
         with open(f_in, 'r') as read_file:
             coll_data = json.load(read_file)
         return coll_data
@@ -565,7 +592,6 @@ def update_collection(coll, args, g_list, s_list, d_list, re_s):
         print("Your collection has been successfully updated")
         return 0
     else:
-
         for i in range(len(coll[1])):
             for j in range(len(update_coll[1])):
                 removed = True
@@ -599,8 +625,7 @@ def update_collection(coll, args, g_list, s_list, d_list, re_s):
 
         coll[0]['total'] = update_coll[0]['total']
         coll[0]['date_created'] = time.localtime()
-        for record in update_coll[1]:
-            coll[1].append(record)
+        coll[1].extend(update_coll[1])
         coll[1].sort(key=lambda x: x.artist)
 
         print("Enter command 'e' to save your updated collection")
