@@ -34,7 +34,7 @@ def main(argv):
         "username": "",
         "token": "",
         "inputfile": "",
-        "folder": '1'
+        "folder": '0'
     }
     usage = '''           Usage: 
                 discogsByStyle.py -u <username> [<-t token>] [-i --ifile filepath] [-m --master] [-r --reissue]'''
@@ -273,6 +273,17 @@ def display_keys(s_list, g_list, d_list):
         _key_format(d_list)
 
 
+def _overview_display(x_list, x_stats, x_all, coll):
+    for x in x_list:
+        num = x_stats.count(x)
+        t = (x, num)
+        x_all.append(t)
+    x_all.sort(key=lambda x: x[1])
+    for i in range(len(x_all)):
+        print(str(x_all[i][0]) + "." * (40 - len(x_all[i][0])), end="")
+        print("{:>4} --- {:>5.2f} %".format(x_all[i][1], (100 * (x_all[i][1] / coll[0]['total']))))
+
+
 def display(coll, s_list, g_list, d_list, c, r, m, ff):
 
     _opt = ""
@@ -409,42 +420,15 @@ def display(coll, s_list, g_list, d_list, c, r, m, ff):
         genre_stats.sort()
         decade_stats.sort()
 
-        # Counts the number of occurrences of a particular style and creates a tuple, which is then appended
+        # Counts the number of occurrences of a particular style/genre/decade and creates a tuple, which is then added
         # to a list of styles.  That list of (style, count) tuples is sorted based on the count, and then printed
+
         print(" " * 19 + "TOTAL STYLES\n" + ("-" * 56))
-        for style in s_list:
-            num = style_stats.count(style)
-            t = (style, num)
-            all_styles.append(t)
-        all_styles.sort(key=lambda x: x[1])
-        for i in range(len(all_styles)):
-            print(str(all_styles[i][0]) + "." * (40-len(all_styles[i][0])), end="")
-            print("{:>4} --- {:>5.2f} %".format(all_styles[i][1], (100*(all_styles[i][1]/coll[0]['total']))))
-
-        # Performs a similar function as above, but with genre instead of style
+        _overview_display(s_list, style_stats, all_styles, coll)
         print("-" * 56 + "\n" + " " * 19 + "TOTAL GENRES\n" + ("-" * 56))
-        for genre in g_list:
-            num = genre_stats.count(genre)
-            t = (genre, num)
-            all_genres.append(t)
-        all_genres.sort(key=lambda x: x[1])
-        for i in range(len(all_genres)):
-            print(str(all_genres[i][0]) + "." * (40-len(all_genres[i][0])), end="")
-            print("{:>4} --- {:>5.2f} %".format(all_genres[i][1], (100*(all_genres[i][1]/coll[0]['total']))))
-
-        # Same as above, but with decades
+        _overview_display(g_list, genre_stats, all_genres, coll)
         print("-" * 56 + "\n" + " " * 18 + "TOTAL DECADES\n" + ("-" * 56))
-        for decade in d_list:
-            num = decade_stats.count(decade)
-            t = (decade, num)
-            all_decades.append(t)
-        all_decades.sort(key=lambda x: x[1])
-        for i in range(len(all_decades)):
-            if all_decades[i][0] == "0":
-                print("n/a" + "." * 37, end="")
-            else:
-                print(str(all_decades[i][0]) + "." * (40-len(all_decades[i][0])), end="")
-            print("{:>4} --- {:5.2f} %".format(all_decades[i][1], (100*(all_decades[i][1]/coll[0]['total']))))
+        _overview_display(d_list, decade_stats, all_decades, coll)
         print("-" * 56 + f"\nTotal: {count}")
         if not coll[0]['master_data']:
             print("For most accurate Total Decade data, run program with -m")
@@ -467,7 +451,7 @@ def get_folders(arg_d):
         try:
             folder_ids = []
             folder_opt = -1
-            url = f"https://api.discogs.com/users/{arg_d['username']}/collection/folders"
+            url = f"https://api.discogs.com/users/{arg_d['username']}/collection/folders?token={arg_d['token']}"
             response = requests.get(url)
             error_check(response)
             folder_dict = response.json()
@@ -481,7 +465,12 @@ def get_folders(arg_d):
             arg_d['folder'] = folder_opt
             return 0
         except KeyError:
-            arg_d.username = input("Enter Username: ")
+            if not arg_d['username'] or not arg_d['token']:
+                arg_d['username'] = input("Enter Username: ")
+                arg_d['token'] = input("Enter Token: ")
+            else:
+                print("Something went wrong.  Exiting")
+                sys.exit(4)
 
 
 def get_discogs(arg_d, ff):
@@ -595,6 +584,7 @@ def get_masters(coll, token, num_r, r, m):
         count += 1
     print()
     return 0
+
 
 def json_file(coll, f_in=0):
     j_list = []
