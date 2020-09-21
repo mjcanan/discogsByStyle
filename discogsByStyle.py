@@ -317,7 +317,10 @@ def display(coll, s_list, g_list, d_list, c, r, m, ff):
         _opt = input(f"Choose {sort_str}: ")
 
         if _opt.lower() == '-h':
-            print("\nUsage: Enter a key. For list of keys, Press k.\nPress q to quit, Press m to return to main menu\n")
+            print("\nUsage: Enter a key. For list of keys, Press k\nPress q to quit, Press m to return to main menu\n\n"
+                  "Output legend:\n[#]. [Artist] - [Title] ([Release Date])\n<IF A REISSUE (R): [Reissue Release Date]>"
+                  "\n    Styles: [Styles]\n    Genres: [Genres]\n"
+                  "Most accurate date information only available if collection loaded with master release date")
             continue
         elif _opt.lower() == 'k':
             if c == 's':
@@ -369,6 +372,7 @@ def display(coll, s_list, g_list, d_list, c, r, m, ff):
             Press m to return to the main menu
             Press e to save collection to file
             Press q to quit.''')
+
 
     # Print records to screen in easy to read format
     if d_opt:
