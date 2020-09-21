@@ -6,7 +6,7 @@ import json
 
 
 class Record:
-    def __init__(self, a, t, g, s, y, murl, iid):
+    def __init__(self, a, t, g, s, y, murl, iid, l):
         self.artist = a
         self.title = t
         self.genres = g
@@ -14,7 +14,7 @@ class Record:
         self.year = y
         self.master_url = murl
         self.instance_id = iid
-        #self.label = l
+        self.labels = l
         self.reissue_year = 0
         self.reissue = False
         self.decade = self.__decade__(y)
@@ -30,8 +30,12 @@ def main(argv):
     master = False
     reissues = False
     from_file = False
-    folders = False
-    arg_dict = {}
+    arg_dict = {
+        "username": "",
+        "token": "",
+        "inputfile": "",
+        "folder": '1'
+    }
     usage = '''           Usage: 
                 discogsByStyle.py -u <username> [<-t token>] [-i --ifile filepath] [-m --master] [-r --reissue]'''
 
@@ -40,7 +44,8 @@ def main(argv):
         print(usage)
         sys.exit(3)
     try:
-        opts, args = getopt.getopt(argv, 'hu:i:t:rmv', ['username=', 'token=', 'ifile=', 'help', 'reissue', 'master', 'verbose'])
+        # TODO: argparse instead of getopt
+        opts, args = getopt.getopt(argv, 'hu:i:t:frmv', ['username=', 'token=', 'ifile=', 'help', 'reissue', 'master', 'verbose', 'folder'])
     except getopt.GetoptError:
         print('Invalid input.  Enter -h for usage.')
         sys.exit(2)
@@ -86,8 +91,8 @@ def main(argv):
             reissues = True
         elif opt in ['-m', '--master']:
             master = True
-        #elif opt in ['-f', '--folders']:
-        #    folders = True
+        elif opt in ['-f', '--folder']:
+            get_folders(arg_dict)
 
     print('''
             ********************DISCOGS SORTER**********************
@@ -109,9 +114,10 @@ Loading your Discogs collection...''')
     decade_list = []
     reissue_num = [0]
 
+# TODO: make this its own function
     # Obtain collection from Discogs, sort by artist name, then sort genres and styles alphabetically, decades by year
-    collection = get_discogs(arg_dict, from_file, folders)
-    f_collection = format_discogs(collection, genre_list, style_list, decade_list, reissue_num, from_file)
+    collection = get_discogs(arg_dict, from_file)
+    f_collection = format_discogs(arg_dict, collection, genre_list, style_list, decade_list, reissue_num, from_file)
     f_collection[1].sort(key=lambda x: x.artist)
     if master or reissues:
         get_masters(f_collection, arg_dict['token'], reissue_num, reissues, master)
@@ -159,7 +165,7 @@ Loading your Discogs collection...''')
             print("Invalid command.  Enter -h for help")
 
 
-def format_discogs(coll, g_list, s_list, d_list, re_s, f_file):
+def format_discogs(arg_d, coll, g_list, s_list, d_list, re_s, f_file):
 
     formatted_collection = []
     collection_info = {}
@@ -167,11 +173,17 @@ def format_discogs(coll, g_list, s_list, d_list, re_s, f_file):
 
     # Create a list of Record objects containing relevant data from Discogs API calls
     if not f_file:
+        # Get info for the header from coll and arg_d (excluding token for security reasons)
         collection_info['date_created'] = time.localtime()
         collection_info['total'] = coll[0]['pagination']['items']
-        collection_info['instance_ids'] = []
+        for key in arg_d:
+            if key == 'token':
+                continue
+            else:
+                collection_info[key] = arg_d[key]
         collection_info['master_data'] = False
         collection_info['reissue_data'] = False
+        # Getting record information from coll
         for i in range(len(coll)):
             for j in range(len(coll[i]['releases'])):
                 title = coll[i]['releases'][j]['basic_information']['title']
@@ -185,8 +197,9 @@ def format_discogs(coll, g_list, s_list, d_list, re_s, f_file):
                 except KeyError:
                     master_url = None
                 format_list = coll[i]['releases'][j]['basic_information']['formats']
+                label_list = coll[i]['releases'][j]['basic_information']['labels']
 
-                rec = Record(artist, title, genres, styles, year, master_url, instance_id)
+                rec = Record(artist, title, genres, styles, year, master_url, instance_id, label_list)
 
                 for f in range(len(format_list)):
                     try:
@@ -198,7 +211,6 @@ def format_discogs(coll, g_list, s_list, d_list, re_s, f_file):
                         pass
 
                 records.append(rec)
-                collection_info['instance_ids'].append(rec.instance_id)
                 initialize_key_lists(s_list, g_list, d_list, rec)
     else:
         for i in range(len(coll[1])):
@@ -209,8 +221,9 @@ def format_discogs(coll, g_list, s_list, d_list, re_s, f_file):
             year = coll[1][i]['year']
             master_url = coll[1][i]['master_url']
             instance_id = coll[1][i]['instance_id']
+            labels = coll[1][i]['labels']
 
-            rec = Record(artist, title, genres, styles, year, master_url, instance_id)
+            rec = Record(artist, title, genres, styles, year, master_url, instance_id, labels)
             rec.reissue_year = coll[1][i]['reissue_year']
             rec.reissue = coll[1][i]['reissue']
             records.append(rec)
@@ -235,14 +248,29 @@ def initialize_key_lists(sl, gl, dl, rcd):
         dl.append(rcd.decade)
 
 
+def _key_format(x_list):
+    x = divmod(len(x_list), 7)
+    remainder = x[1]
+    breaks = x[0]
+    x_index = 0
+
+    while breaks:
+        print(" | ".join(x_list[x_index:x_index + 7]))
+        x_index += 7
+        breaks -= 1
+    print(" | ".join(x_list[x_index:x_index + remainder]))
+
 def display_keys(s_list, g_list, d_list):
 
     if s_list:
-        print(f"Style Keys: {' | '.join(s_list)}\n")
+        print(f"\nStyle Keys: {len(s_list)}")
+        _key_format(s_list)
     if g_list:
-        print(f"Genre Keys: {' | '.join(g_list)}\n")
+        print(f"\nGenre Keys: {len(g_list)}\n")
+        _key_format(g_list)
     if d_list:
-        print(f"Decade Keys: {' | '.join(d_list)}\n")
+        print(f"\nDecade Keys: {len(d_list)}\n")
+        _key_format(d_list)
 
 
 def display(coll, s_list, g_list, d_list, c, r, m, ff):
@@ -434,7 +462,29 @@ def error_check(res):
     return 0
 
 
-def get_discogs(arg_d, ff, pick_folder=True):
+def get_folders(arg_d):
+    while True:
+        try:
+            folder_ids = []
+            folder_opt = -1
+            url = f"https://api.discogs.com/users/{arg_d['username']}/collection/folders"
+            response = requests.get(url)
+            error_check(response)
+            folder_dict = response.json()
+            for folder in folder_dict['folders']:
+                folder_ids.append(folder['id'])
+            while int(folder_opt) not in folder_ids:
+                print("Choose Folder:")
+                for folder in folder_dict['folders']:
+                    print(f"For {folder['name']}, enter {folder['id']}")
+                folder_opt = input("Folder number: ")
+            arg_d['folder'] = folder_opt
+            return 0
+        except KeyError:
+            arg_d.username = input("Enter Username: ")
+
+
+def get_discogs(arg_d, ff):
     col_list = []
 
     if ff:
@@ -442,30 +492,8 @@ def get_discogs(arg_d, ff, pick_folder=True):
         return col_list
     else:
         try:
-            url = f"https://api.discogs.com/users/{arg_d.username}/collection/folders"
-
-            if pick_folder:
-                folder_ids = []
-                folder_opt = ""
-
-                response = requests.get(url)
-                error_check(response)
-                folder_dict = response.json
-                for folder in folder_dict['folders']:
-                    folder_ids.append(folder.id)
-                if __name__ == '__main__':
-                    while folder_opt not in folder_ids:
-                        print("Choose Folder:")
-                        for folder in folder_dict['folders']:
-                            print(f"For {folder.name}, enter {folder.id}")
-                        folder_opt = input("")
-            else:
-                folder_opt = "0"
-
-            url += f"/{folder_opt}/releases?token={arg_d.token}&per_page=100"
-            #url = ("https://api.discogs.com/users/" + arg_d['username'] + "/collection/folders/0/releases?token=" +
-            #   arg_d['token'] + "&per_page=100")
-
+            url = f"https://api.discogs.com/users/{arg_d['username']}/collection/folders/{arg_d['folder']}" \
+                  f"/releases?token={arg_d['token']}&per_page=100"
             response = requests.get(url)
             error_check(response)
 
@@ -509,26 +537,33 @@ def get_masters(coll, token, num_r, r, m):
         if r:
             time_tup = divmod(num_r[0], 60)
             wait_str = "reissues'"
+
         elif m:
-            time_tup = divmod(len(coll[1]), 60)
+            time_tup = divmod(coll[0]['total'], 60)
             wait_str = "all"
 
+
         print(f"Loading {wait_str} master release dates..." +
-              "\nEstimated wait time: {0} minutes and {1} seconds".format(time_tup[0], time_tup[1]))
+              "\nEstimated wait time: {} minutes and {} seconds".format(time_tup[0], time_tup[1]))
 
     # Sleep for a few seconds based on the number of previously made API calls to avoid 429 Response
     start_sleep = int(len(coll[1])/100 + 1)
     time.sleep(start_sleep)
     sleep_time = 1
+    count = 1
+    blocks = ""
+    progress_bar = 5
 
     for record in coll[1]:
         if not record.reissue:
             if r:
+                count += 1
                 continue
             elif m:
                 pass
 
         if record.master_url is None:
+            count += 1
             continue
 
         url = record.master_url + "?token=" + token
@@ -548,23 +583,32 @@ def get_masters(coll, token, num_r, r, m):
             record.year = rec_dict['year']
 
         record.decade = record.__decade__(record.year)
-        time.sleep(sleep_time)
+        print("\rLoading {:{pad}d} of {} records - {:20}{:.2f}%"
+              .format(count, coll[0]['total'], blocks, (count/coll[0]['total'])*100, pad=len(str(coll[0]['total']))),
+              end="")
 
+        if int(100*count/coll[0]['total']) >= progress_bar:
+            blocks += chr(9608)
+            progress_bar += 5
+
+        time.sleep(sleep_time)
+        count += 1
+    print()
+    return 0
 
 def json_file(coll, f_in=0):
     j_list = []
     j_out = []
 
     if not f_in:
+        coll[0]['inputfile'] = input("Save File As: ")
         j_out.append(coll[0])
         for r in coll[1]:
             j_list.append(vars(r))
         j_out.append(j_list)
-        # TODO: let user choose file name
-        with open('my_discogs_col.json', 'w') as fout:
+        with open(f"{coll[0]['inputfile']}.json", 'w') as fout:
             json.dump(j_out, fout)
     else:
-        # TODO: let user choose file
         with open(f_in, 'r') as read_file:
             coll_data = json.load(read_file)
         return coll_data
@@ -579,8 +623,8 @@ def update_collection(coll, args, g_list, s_list, d_list, re_s):
     if 'token' not in args.keys():
         args['token'] = input("Enter Token: ")
 
-    update_coll = get_discogs(args, False)
-    update_coll = format_discogs(update_coll, g_list, s_list, d_list, re_s, False)
+    update_coll = get_discogs(args, False, True)
+    update_coll = format_discogs(args, update_coll, g_list, s_list, d_list, re_s, False)
 
     # Sorting both collections by instance id to speed up nested for loops later
     # TODO: Sort one list by id, then use binary search function?
