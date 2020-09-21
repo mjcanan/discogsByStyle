@@ -37,7 +37,7 @@ def main(argv):
         "folder": '0'
     }
     usage = '''           Usage: 
-                discogsByStyle.py -u <username> [<-t token>] [-i --ifile filepath] [-m --master] [-r --reissue]'''
+            discogsByStyle.py -u <username> [<-t token>] [-i --ifile filepath] [-m --master] [-r --reissue] [-v --verbose] [-f --folders]'''
 
     # Error check for proper command line inputs
     if not argv:
@@ -45,7 +45,7 @@ def main(argv):
         sys.exit(3)
     try:
         # TODO: argparse instead of getopt
-        opts, args = getopt.getopt(argv, 'hu:i:t:frmv', ['username=', 'token=', 'ifile=', 'help', 'reissue', 'master', 'verbose', 'folder'])
+        opts, args = getopt.getopt(argv, 'hu:i:t:frmv', ['username=', 'token=', 'ifile=', 'help', 'reissue', 'master', 'verbose', 'folders'])
     except getopt.GetoptError:
         print('Invalid input.  Enter -h for usage.')
         sys.exit(2)
@@ -69,6 +69,7 @@ def main(argv):
             Flags and Options:
                 -u or --username : your Discogs username should be entered here
                 -t or --token    : load collection from Discogs using your authentication token
+                -f or --folders  : load collection from particular Discogs folder (use with -u and -t)
                 -i or --ifile    : load collection from a saved file
                 -r or --reissue  : load data from your reissues' masters on Discogs
                 -m or --master   : load data from all your albums' masters on Discogs
@@ -91,7 +92,7 @@ def main(argv):
             reissues = True
         elif opt in ['-m', '--master']:
             master = True
-        elif opt in ['-f', '--folder']:
+        elif opt in ['-f', '--folders']:
             get_folders(arg_dict)
 
     print('''
@@ -154,7 +155,7 @@ Loading your Discogs collection...''')
             q: Quit''')
         elif cmd == 'e':
             json_file(f_collection)
-            print(f"Saved {f_collection[0]['total']} records to my_discogs_col.json")
+            print(f"Saved {f_collection[0]['total']} records to {f_collection[0]['inputfile']}")
         elif cmd == 'u':
             if from_file:
                 update_collection(f_collection, arg_dict, genre_list, style_list, decade_list, reissue_num)
@@ -211,7 +212,7 @@ def format_discogs(arg_d, coll, g_list, s_list, d_list, re_s, f_file):
                         pass
 
                 records.append(rec)
-                initialize_key_lists(s_list, g_list, d_list, rec)
+                _initialize_key_lists(s_list, g_list, d_list, rec)
     else:
         for i in range(len(coll[1])):
             title = coll[1][i]['title']
@@ -228,15 +229,14 @@ def format_discogs(arg_d, coll, g_list, s_list, d_list, re_s, f_file):
             rec.reissue = coll[1][i]['reissue']
             records.append(rec)
             collection_info = coll[0]
-            initialize_key_lists(s_list, g_list, d_list, rec)
-
+            _initialize_key_lists(s_list, g_list, d_list, rec)
 
     formatted_collection.append(collection_info)
     formatted_collection.append(records)
     return formatted_collection
 
 
-def initialize_key_lists(sl, gl, dl, rcd):
+def _initialize_key_lists(sl, gl, dl, rcd):
     # Initializing key lists
     for s in rcd.styles:
         if not(s in sl):
@@ -249,6 +249,7 @@ def initialize_key_lists(sl, gl, dl, rcd):
 
 
 def _key_format(x_list):
+    # TODO: import textwrap?
     x = divmod(len(x_list), 7)
     remainder = x[1]
     breaks = x[0]
@@ -260,10 +261,11 @@ def _key_format(x_list):
         breaks -= 1
     print(" | ".join(x_list[x_index:x_index + remainder]))
 
+
 def display_keys(s_list, g_list, d_list):
 
     if s_list:
-        print(f"\nStyle Keys: {len(s_list)}")
+        print(f"\nStyle Keys: {len(s_list)}\n")
         _key_format(s_list)
     if g_list:
         print(f"\nGenre Keys: {len(g_list)}\n")
@@ -274,6 +276,7 @@ def display_keys(s_list, g_list, d_list):
 
 
 def _overview_display(x_list, x_stats, x_all, coll):
+    # Handles text formatting for the overview option (will print style, genre and decade lists in same format)
     for x in x_list:
         num = x_stats.count(x)
         t = (x, num)
@@ -283,7 +286,7 @@ def _overview_display(x_list, x_stats, x_all, coll):
         print(str(x_all[i][0]) + "." * (40 - len(x_all[i][0])), end="")
         print("{:>4} --- {:>5.2f} %".format(x_all[i][1], (100 * (x_all[i][1] / coll[0]['total']))))
 
-
+# TODO: move all terminal/console display functions to new file
 def display(coll, s_list, g_list, d_list, c, r, m, ff):
 
     _opt = ""
@@ -327,8 +330,8 @@ def display(coll, s_list, g_list, d_list, c, r, m, ff):
         elif _opt.lower() == 'q':
             sys.exit()
         elif _opt.lower() == 'e':
-            json_file(coll)
-            print(f"Saved {coll[0]['total']} records to my_discogs_col.json")
+            file_name = json_file(coll)
+            print(f"Saved {coll[0]['total']} records to {file_name}.json")
         elif _opt.lower() == 'm':
             return
 
@@ -358,7 +361,7 @@ def display(coll, s_list, g_list, d_list, c, r, m, ff):
                     print("\ts: Sort by style\n\tg: Sort by genre\n\ta: Print all from this decade")
                 elif _opt == 'e':
                     json_file(coll)
-                    print(f"Saved {coll[0]['total']} records to my_discogs_col.json.")
+                    print(f"Saved {coll[0]['total']} records to {coll[0]['inputfile']}")
                 else:
                     print('''Usage:
             Enter s, g or a to select a sort method
@@ -375,7 +378,10 @@ def display(coll, s_list, g_list, d_list, c, r, m, ff):
 
     for record in coll[1]:
         if record.reissue and (r or m or ff):
-            r_str = "\n    (R): " + str(record.reissue_year)
+            zero_year_check = str(record.reissue_year)
+            if zero_year_check == '0':
+                zero_year_check = "n/a"
+            r_str = "\n    (R): " + zero_year_check
         else:
             r_str = ""
 
@@ -434,7 +440,7 @@ def display(coll, s_list, g_list, d_list, c, r, m, ff):
             print("For most accurate Total Decade data, run program with -m")
 
 
-def error_check(res):
+def _error_check(res):
     # Handling responses other than OK
     if not res.ok:
         print(f"An Error Occurred --  Code {res.status_code}: {res.reason}.")
@@ -453,15 +459,20 @@ def get_folders(arg_d):
             folder_opt = -1
             url = f"https://api.discogs.com/users/{arg_d['username']}/collection/folders?token={arg_d['token']}"
             response = requests.get(url)
-            error_check(response)
+            _error_check(response)
             folder_dict = response.json()
             for folder in folder_dict['folders']:
-                folder_ids.append(folder['id'])
-            while int(folder_opt) not in folder_ids:
+                folder_ids.append(str(folder['id']))
+            while folder_opt not in folder_ids:
                 print("Choose Folder:")
                 for folder in folder_dict['folders']:
                     print(f"For {folder['name']}, enter {folder['id']}")
                 folder_opt = input("Folder number: ")
+                if folder_opt == 'h':
+                    print("Select your folder from the options above.  If you do not see the folder you are looking "
+                          "for, try running this program with a token.")
+                elif folder_opt == 'q':
+                    sys.exit()
             arg_d['folder'] = folder_opt
             return 0
         except KeyError:
@@ -471,6 +482,10 @@ def get_folders(arg_d):
             else:
                 print("Something went wrong.  Exiting")
                 sys.exit(4)
+        except requests.exceptions.ConnectionError as e:
+            print("ConnectionError: No connection established.  Max retries exceeded.\nExiting...")
+            sys.exit(4)
+
 
 
 def get_discogs(arg_d, ff):
@@ -484,7 +499,7 @@ def get_discogs(arg_d, ff):
             url = f"https://api.discogs.com/users/{arg_d['username']}/collection/folders/{arg_d['folder']}" \
                   f"/releases?token={arg_d['token']}&per_page=100"
             response = requests.get(url)
-            error_check(response)
+            _error_check(response)
 
             col_dict = response.json()
             col_list.append(col_dict)
@@ -499,7 +514,7 @@ def get_discogs(arg_d, ff):
                     #Last page won't have next url
                     break
                 response = requests.get(col_next)
-                error_check(response)
+                _error_check(response)
                 col_dict = response.json()
                 col_list.append(col_dict)
 
@@ -508,6 +523,9 @@ def get_discogs(arg_d, ff):
         except KeyError:
             print("Something went wrong.  Exiting")
             sys.exit(1)
+        except requests.exceptions.ConnectionError:
+            print("ConnectionError: Max retries exceeded.  No connection established.\nExiting...")
+            sys.exit(4)
 
 
 def get_masters(coll, token, num_r, r, m):
@@ -517,6 +535,7 @@ def get_masters(coll, token, num_r, r, m):
 
     if r:
         coll[0]['reissue_data'] = True
+        coll[0]['master_data'] = False
     elif m:
         coll[0]['master_data'] = True
         coll[0]['reissue_data'] = True
@@ -556,8 +575,12 @@ def get_masters(coll, token, num_r, r, m):
             continue
 
         url = record.master_url + "?token=" + token
-        response = requests.get(url)
-        error_check(response)
+        try:
+            response = requests.get(url)
+            _error_check(response)
+        except requests.exceptions.ConnectionError:
+            print("ConnectionError: Max retries exceeded.  No connection established\nAborting...")
+            return
 
         # Optimization for smaller reissue collections
         if num_r[0] + start_sleep < int(response.headers['X-Discogs-Ratelimit-Remaining']) and r:
@@ -590,13 +613,14 @@ def json_file(coll, f_in=0):
     j_list = []
     j_out = []
 
+    # TODO: output to collections folder instead of main folder
     if not f_in:
-        coll[0]['inputfile'] = input("Save File As: ")
+        coll[0]['inputfile'] = input("Save File As: ") + ".json"
         j_out.append(coll[0])
         for r in coll[1]:
             j_list.append(vars(r))
         j_out.append(j_list)
-        with open(f"{coll[0]['inputfile']}.json", 'w') as fout:
+        with open(f"{coll[0]['inputfile']}", 'w') as fout:
             json.dump(j_out, fout)
     else:
         with open(f_in, 'r') as read_file:
