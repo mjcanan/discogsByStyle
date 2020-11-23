@@ -210,9 +210,10 @@ def format_discogs(arg_d, coll, g_list, s_list, d_list, re_s, f_file):
                     except KeyError:
                         # box sets include a format which does not contain a 'descriptions' tag
                         pass
-
                 records.append(rec)
                 _initialize_key_lists(s_list, g_list, d_list, rec)
+        # TODO: why did I need re_s again?
+        #collection_info['reissue_total'] = re_s[0]
     else:
         for i in range(len(coll[1])):
             title = coll[1][i]['title']
@@ -553,8 +554,7 @@ def get_masters(coll, token, num_r, r, m):
         elif m:
             time_tup = divmod(coll[0]['total'], 60)
             wait_str = "all"
-
-
+        # TODO: do not output this if you are updating a collection
         print(f"Loading {wait_str} master release dates..." +
               "\nEstimated wait time: {} minutes and {} seconds".format(time_tup[0], time_tup[1]))
 
@@ -599,6 +599,7 @@ def get_masters(coll, token, num_r, r, m):
             record.year = rec_dict['year']
 
         record.decade = record.__decade__(record.year)
+        #TODO: do not output this string if you're updating a collection (its inaccurate)
         print("\rLoading {:{pad}d} of {} records - {:20}{:.2f}%"
               .format(count, coll[0]['total'], blocks, (count/coll[0]['total'])*100, pad=len(str(coll[0]['total']))),
               end="")
@@ -641,11 +642,10 @@ def update_collection(coll, args, g_list, s_list, d_list, re_s):
     if 'token' not in args.keys():
         args['token'] = input("Enter Token: ")
 
-    update_coll = get_discogs(args, False, True)
+    update_coll = get_discogs(args, False)
     update_coll = format_discogs(args, update_coll, g_list, s_list, d_list, re_s, False)
 
     # Sorting both collections by instance id to speed up nested for loops later
-    # TODO: Sort one list by id, then use binary search function?
     coll[1].sort(key=lambda x: x.instance_id)
     update_coll[1].sort(key=lambda x: x.instance_id)
 
@@ -680,6 +680,7 @@ def update_collection(coll, args, g_list, s_list, d_list, re_s):
         if update_coll[1]:
             up = []
             up.append(len(update_coll[1]))
+            #TODO: get_masters shouldn't output the normal loading screen when doing an update
             get_masters(update_coll, args['token'], up, False, True)
             print(f"Updated collection with {len(update_coll[1])} new record(s)")
         else:
