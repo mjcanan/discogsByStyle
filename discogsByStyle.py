@@ -3,6 +3,7 @@ import sys
 import getopt
 import time
 import json
+import random
 
 
 class Record:
@@ -134,6 +135,8 @@ Loading your Discogs collection...''')
             display_keys(style_list, genre_list, decade_list)
         elif cmd in ['s', 'g', 'a', 'o', 'd']:
             display(f_collection, style_list, genre_list, decade_list, cmd, reissues, master, from_file)
+        elif cmd == 'r':
+            random_record(f_collection, style_list, genre_list, decade_list)
         elif cmd == 'q':
             sys.exit()
         elif cmd == '-h':
@@ -149,6 +152,7 @@ Loading your Discogs collection...''')
                 a: Print all records in your collection from that decade (xxx0 - xxxx9)
                     NOTE:   not all records in Discogs have year information.  For those records that don't
                             have a year, the year may appear as '0' or 'n/a' 
+            r: Return a random record from your collection, with filter options
             e: Export/Save your collection to a file
             u: Update your saved collection with your latest additions/substractions from Discogs
                 (You will need to save with command 'e' to save your new collection to a file)
@@ -693,6 +697,46 @@ def update_collection(coll, args, g_list, s_list, d_list, re_s):
 
         print("Enter command 'e' to save your updated collection")
         return 0
+
+#TODO: make this a separate file and refactor everything into a Collection object
+def random_record(coll, r_s_list, r_g_list, r_d_list):
+    if __name__ == "__main__":
+        print('''
+This will choose a random record from your collection.
+To choose any record, enter "-a"
+To filter by genre, enter a genre key
+Type "-k" for key list
+Type "-q" to quit''')
+    while True:
+        f_cmd = input("Enter Random Record Filter: ")
+        if f_cmd == '-k':
+            display_keys(r_s_list, r_g_list, r_d_list)
+            f_cmd = ""
+        elif f_cmd == '-a':
+            i = random.randint(0, len(coll[1]))
+            print(f"{coll[1][i].artist} - {coll[1][i].title}")
+            return
+        elif f_cmd == '-q':
+            sys.exit()
+        else:
+            #TODO: search for specific genres to do the search for.
+            search_list = []
+            for r in coll[1]:
+                # TODO: debug this to see if records are being added more than once because of the r.styles loop
+                for g in r.genres:
+                    if f_cmd.lower() == g.lower():
+                        search_list.append(r)
+                for s in r.styles:
+                    if f_cmd.lower() == s.lower() and r not in search_list:
+                        search_list.append(r)
+            i = random.randint(0, len(search_list))
+            try:
+                print(f"{search_list[i].artist} - {search_list[i].title}")
+                print(f"G: {search_list[i].genres} - S: {search_list[i].styles}")
+            except IndexError:
+                print("No records found")
+                continue
+            return
 
 
 if __name__ == "__main__":
