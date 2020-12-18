@@ -42,10 +42,11 @@ release date information)<br>
 <li>&nbsp;g: Returns all records in your collection that match the selected genre, sorted by artist name<br>
 <li>&nbsp;d: Sorts collection by decade, then choose either to:<br>
 <ul><li>s: Return all records that match the chosen style AND decade<br>
-<li>g: Return all records that match the chosen genre AND decade<br>
-<li>a: Return all records that match the chosen decade</li></ul>
+<li> g: Return all records that match the chosen genre AND decade<br>
+<li> a: Return all records that match the chosen decade</li></ul>
+<li> r: Returns a random record from your collection - allows for filtering<br>
 <li>-h: Help - displays usage<br>
-<li>e: Export/Save your loaded Discog's collection to a file for easier loading in the future<br>
+<li> e: Export/Save your loaded Discog's collection to a file for easier loading in the future<br>
 <li>&nbsp;q: Quit</li></ul></ul>
 <ul>Choose Style/Genre/Decade Menu
 <ul><li>&nbsp;k: Prints style, genre, or decade keys</li>
@@ -123,11 +124,20 @@ your own collection and not the collection of others, it was easier to implement
 go through the trouble of registering and rewriting the program.  Nothing is written in stone, however, so this may 
 change in a future version.</li></ul>
 
+# Dependencies
+<li>requests
+<li>sys
+<li>getopt
+<li>time
+<li>json
+<li>random
+</li>
+
 # Features to Add/Revise
 [ ] Load from file while running program<br>
 [ ] Allow users to choose sort keys<br>
 [ ] Filter function to allow sorting by multiple styles/genres/decades<br>
-[ ] Allow users to choose Discogs folder<br>
-[ ] User selected file names<br>
+[X] Allow users to choose Discogs folder<br>
+[X] User selected file names<br>
 [ ] Optimize sorting and searching in update function<br>
 [ ] Improve key display<br>
