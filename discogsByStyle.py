@@ -682,6 +682,9 @@ def update_collection(coll, args, g_list, s_list, d_list, re_s):
             print("No records to remove.")
         # If there are still records in the update, then these are new records to be added to the collection.
         if update_coll[1]:
+            # print to screen the records that will be added to the collection
+            for i in range(len(update_coll[1])):
+                print(f"Adding {update_coll[1][i].artist} - {update_coll[1][i].title} to your collection")
             up = []
             up.append(len(update_coll[1]))
             #TODO: get_masters shouldn't output the normal loading screen when doing an update
@@ -706,6 +709,7 @@ This will choose a random record from your collection.
 To choose any record, enter "-a"
 To filter by genre, enter a genre key
 Type "-k" for key list
+Type "-m" to return to main menu
 Type "-q" to quit''')
     while True:
         f_cmd = input("Enter Random Record Filter: ")
@@ -718,6 +722,8 @@ Type "-q" to quit''')
             return
         elif f_cmd == '-q':
             sys.exit()
+        elif f_cmd == '-m':
+            return
         else:
             #TODO: search for specific genres to do the search for.
             search_list = []
