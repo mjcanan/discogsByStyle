@@ -623,6 +623,7 @@ def json_file(coll, f_in=0):
     j_out = []
 
     # TODO: output to collections folder instead of main folder
+    # TODO: handle FileNotFoundError -- if FNF ask for new file path or enter -m to go to main menu
     if not f_in:
         coll[0]['inputfile'] = input("Save File As: ") + ".json"
         j_out.append(coll[0])
@@ -640,10 +641,10 @@ def json_file(coll, f_in=0):
 def update_collection(coll, args, g_list, s_list, d_list, re_s):
     to_remove = []
 
-    if 'username' not in args.keys():
+    if not args['username']:
         args['username'] = input("Enter Username: ")
 
-    if 'token' not in args.keys():
+    if not args['token']:
         args['token'] = input("Enter Token: ")
 
     update_coll = get_discogs(args, False)
