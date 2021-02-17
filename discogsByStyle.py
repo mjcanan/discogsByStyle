@@ -704,11 +704,21 @@ def update_collection(coll, args, g_list, s_list, d_list, re_s):
 
 #TODO: make this a separate file and refactor everything into a Collection object
 def random_record(coll, r_s_list, r_g_list, r_d_list):
-    if __name__ == "__main__":
+    flag = "z"
+
+    while flag not in ('a', 'g', 's', 'd'):
         print('''
 This will choose a random record from your collection.
-To choose any record, enter "-a"
-To filter by genre, enter a genre key
+To filter this record by style, enter : s
+To filter this record by genre, enter : g
+To filter this record by decade, enter: d
+To select from all records, enter     : a
+Enter m to return''')
+        flag = input('Selection: ')
+        if flag == 'm':
+            return
+
+    print('''
 Type "-k" for key list
 Type "-m" to return to main menu
 Type "-q" to quit''')
@@ -726,19 +736,24 @@ Type "-q" to quit''')
         elif f_cmd == '-m':
             return
         else:
-            #TODO: search for specific genres to do the search for.
             search_list = []
-            for r in coll[1]:
-                # TODO: debug this to see if records are being added more than once because of the r.styles loop
-                for g in r.genres:
-                    if f_cmd.lower() == g.lower():
+            if flag == 'g':
+                for r in coll[1]:
+                    for g in r.genres:
+                        if f_cmd.lower() == g.lower():
+                            search_list.append(r)
+            if flag == 's':
+                for r in coll[1]:
+                    for s in r.styles:
+                        if f_cmd.lower() == s.lower():
+                            search_list.append(r)
+            if flag == 'd':
+                for r in coll[1]:
+                    if f_cmd == r.decade:
                         search_list.append(r)
-                for s in r.styles:
-                    if f_cmd.lower() == s.lower() and r not in search_list:
-                        search_list.append(r)
-            i = random.randint(0, len(search_list))
+            i = random.randint(0, len(search_list)-1)
             try:
-                print(f"{search_list[i].artist} - {search_list[i].title}")
+                print(f"{search_list[i].artist} - {search_list[i].title} - {search_list[i].year}")
                 print(f"G: {search_list[i].genres} - S: {search_list[i].styles}")
             except IndexError:
                 print("No records found")
