@@ -5,6 +5,76 @@ import time
 import json
 import random
 
+class Discogs_Collection:
+    def __init__(self, user="", token="", inputFile="", fileFolder=0):
+        self.collection = []
+        self.user = user
+        self.token = token
+        self.inputFile = inputFile
+        self.fileFolder = fileFolder
+        self.decade_list = []
+        self.genre_list = []
+        self.style_list = []
+
+        #if given input file, load from file and get keys, else load from discogs and get keys
+        if inputFile:
+            self.__load_from_file__()
+            self.__get_keys__()
+        else:
+            self.__load_from_discogs__()
+            self.__get_keys__()
+
+    def __load_from_file__(self):
+        with open(self.inputFile, 'r') as read_file:
+            self.collection = json.load(read_file)
+
+    def __load_from_discogs__(self):
+        #TODO load from discogs
+        #use self.fileFolder, make request, then format the data
+        coll_list = []
+        try:
+            url = f"https://api.discogs.com/users/{self.user}/collection/folders/{self.fileFolder}" \
+                  f"/releases?token={self.token}&per_page=100"
+            response = requests.get(url)
+            Discogs_Collection.__error_check(response)
+            coll_dict = response.json()
+            coll_list.append(coll_dict)
+            page_num = coll_dict['pagination']['pages']
+
+            # Discogs only returns max 100 entries per call - make multiple calls based on number of pages
+            for i in range(page_num - 1):
+                try:
+                    # Discogs API provides direct link to next page
+                    coll_next = coll_dict['pagination']['urls']['next']
+                except KeyError:
+                    # Last page won't have next url
+                    break
+                response = requests.get(coll_next)
+                Discogs_Collection.__error_check(response)
+                coll_dict = response.json()
+                coll_list.append(coll_dict)
+        except KeyError:
+            print("Something went wrong.  Exiting")
+            sys.exit(1)
+        except requests.exceptions.ConnectionError:
+            print("ConnectionError: Max retries exceeded.  No connection established.\nExiting...")
+            sys.exit(4)
+
+        #TODO now format the collection
+    def __get_folders(self):
+        # TODO display your folders
+
+    @staticmethod
+    def __error_check(res):
+        # Handling responses other than OK
+        if not res.ok:
+            print(f"An Error Occurred --  Code {res.status_code}: {res.reason}.")
+            if res.status_code == 429:
+                print("Please wait one minute before retrying.")
+            elif res.status_code == 401:
+                 print("Please check that your token is valid and try again.")
+            sys.exit(4)
+        return 0
 
 class Record:
     def __init__(self, a, t, g, s, y, murl, iid, l):
@@ -449,16 +519,7 @@ def display(coll, s_list, g_list, d_list, c, r, m, ff):
             print("For most accurate Total Decade data, run program with -m")
 
 
-def _error_check(res):
-    # Handling responses other than OK
-    if not res.ok:
-        print(f"An Error Occurred --  Code {res.status_code}: {res.reason}.")
-        if res.status_code == 429:
-            print("Please wait one minute before retrying.")
-        elif res.status_code == 401:
-            print("Please check that your token is valid and try again.")
-        sys.exit(4)
-    return 0
+
 
 
 def get_folders(arg_d):
@@ -499,42 +560,14 @@ def get_folders(arg_d):
 
 def get_discogs(arg_d, ff):
     col_list = []
-
-    if ff:
-        col_list = json_file(0, arg_d['inputfile'])
-        return col_list
-    else:
         try:
-            url = f"https://api.discogs.com/users/{arg_d['username']}/collection/folders/{arg_d['folder']}" \
-                  f"/releases?token={arg_d['token']}&per_page=100"
-            response = requests.get(url)
-            _error_check(response)
 
-            col_dict = response.json()
-            col_list.append(col_dict)
-            page_num = col_dict['pagination']['pages']
 
-            # Discogs only returns max 100 entries per call - make multiple calls based on number of pages
-            for i in range(page_num - 1):
-                try:
-                    # Discogs API provides direct link to next page
-                    col_next = col_dict['pagination']['urls']['next']
-                except KeyError:
-                    #Last page won't have next url
-                    break
-                response = requests.get(col_next)
-                _error_check(response)
-                col_dict = response.json()
-                col_list.append(col_dict)
+
 
             return col_list
 
-        except KeyError:
-            print("Something went wrong.  Exiting")
-            sys.exit(1)
-        except requests.exceptions.ConnectionError:
-            print("ConnectionError: Max retries exceeded.  No connection established.\nExiting...")
-            sys.exit(4)
+
 
 
 def get_masters(coll, token, num_r, r, m):
