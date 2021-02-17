@@ -58,7 +58,7 @@ def main(argv):
     for opt, arg in opts:
         if opt == '-h' or opt == '--help' or len(argv) == 1:
             print(usage)
-            if opt == '-v' or opt == '--verbose':
+            if opt == '-v' or opt == '--verbose': #refaactor usage to allow for verbose
                 print('''
                   
                 An authentication token is needed to use this program
@@ -720,13 +720,14 @@ Type "-q" to quit''')
         elif f_cmd == '-a':
             i = random.randint(0, len(coll[1]))
             print(f"{coll[1][i].artist} - {coll[1][i].title}")
+            #TODO: call to tkinter function to popup window
             return
         elif f_cmd == '-q':
             sys.exit()
         elif f_cmd == '-m':
             return
         else:
-            #TODO: search for specific genres to do the search for.
+            #TODO: allow different filters (style and decade too)
             search_list = []
             for r in coll[1]:
                 # TODO: debug this to see if records are being added more than once because of the r.styles loop
