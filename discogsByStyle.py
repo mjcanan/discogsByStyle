@@ -25,28 +25,27 @@ class Discogs_Collection:
 
     def __load_from_file__(self):
         with open(self.inputFile, 'r') as read_file:
-            self.collection = json.loads(read_file)
+            self.collection = json.load(read_file)
+        records = []
+        for i in range(len(self.collection[1])):
+            title = self.collection[1][i]['title']
+            artist = self.collection[1][i]['artist']
+            genres = self.collection[1][i]['genres']
+            styles = self.collection[1][i]['styles']
+            year = self.collection[1][i]['year']
+            master_url = self.collection[1][i]['master_url']
+            instance_id = self.collection[1][i]['instance_id']
+            labels = self.collection[1][i]['labels']
 
-        #TODO: add genre/style/decade lists to json file - collection_info
+            rec = Record(artist, title, genres, styles, year, master_url, instance_id, labels)
+            rec.reissue_year = self.collection[1][i]['reissue_year']
+            rec.reissue = self.collection[1][i]['reissue']
+            records.append(rec)
 
-        #TODO json to python dict - do i have to do all this or is there a function?]
-
-        # for i in range(len(self.collection[1])):
-        #     title = self.collection[1][i]['title']
-        #     artist = self.collection[1][i]['artist']
-        #     genres = self.collection[1][i]['genres']
-        #     styles = self.collection[1][i]['styles']
-        #     year = self.collection[1][i]['year']
-        #     master_url = self.collection[1][i]['master_url']
-        #     instance_id = self.collection[1][i]['instance_id']
-        #     labels = self.collection[1][i]['labels']
-        #
-        #     rec = Record(artist, title, genres, styles, year, master_url, instance_id, labels)
-        #     rec.reissue_year = self.collection[1][i]['reissue_year']
-        #     rec.reissue = self.collection[1][i]['reissue']
-        #     records.append(rec)
-        #     collection_info = self.collection[0]
-        #     self._initialize_key_lists(rec)
+        collection_info = self.collection[0]
+        self._initialize_key_lists(rec)
+        self.collection = collection_info
+        self.collection.append(records)
 
     def __load_from_discogs__(self):
         #use self.fileFolder, make request, then format the data
@@ -87,6 +86,7 @@ class Discogs_Collection:
 
         # Create a list of Record objects containing relevant data from Discogs API call
         collection_info['date_created'] = time.localtime()
+        collection_info['date_last_save'] = 0
         collection_info['total'] = coll[0]['pagination']['items']
         collection_info['master_data'] = False
         collection_info['reissue_data'] = False
@@ -119,12 +119,15 @@ class Discogs_Collection:
                 records.append(rec)
                 self._initialize_key_lists(rec)
 
+        collection_info['styles'] = self.style_list
+        collection_info['genres'] = self.genre_list
+        collection_info['decades'] = self.decade_list
         formatted_collection.append(collection_info)
         formatted_collection.append(records)
         self.collection = formatted_collection
 
-    def __get_folders(self):
-        # TODO display your folders
+    def _get_folders(self): #TODO
+        return
 
     def __error_check(self,res):
         # Handling responses other than OK
@@ -147,6 +150,21 @@ class Discogs_Collection:
                 self.genre_list.append(g)
         if not (record.decade in self.decade_list):
             self.decade_list.append(record.decade)
+
+    def save_collection(self, save_as):
+        j_list = []
+        j_out = []
+        #If user chooses save as, or has no inputfile, then prompt for file
+        if save_as or not self.inputFile:
+            self.collection[0]['inputfile'] = input("Save File As: ") + ".json"
+        j_out.append(self.collection[0])
+        for record in self.collection[1]:
+            j_list.append(vars(record))
+            j_out.append(j_list)
+        with open(f"{self.collection[0]['inputfile']}", 'w') as fout:
+            json.dump(j_out, fout)
+
+
 
 
 class Record:
