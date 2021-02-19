@@ -15,28 +15,47 @@ class Discogs_Collection:
         self.decade_list = []
         self.genre_list = []
         self.style_list = []
+        self.reissue_num = 0
 
         #if given input file, load from file and get keys, else load from discogs and get keys
         if inputFile:
             self.__load_from_file__()
-            self.__get_keys__()
         else:
             self.__load_from_discogs__()
-            self.__get_keys__()
 
     def __load_from_file__(self):
         with open(self.inputFile, 'r') as read_file:
-            self.collection = json.load(read_file)
+            self.collection = json.loads(read_file)
+
+        #TODO: add genre/style/decade lists to json file - collection_info
+
+        #TODO json to python dict - do i have to do all this or is there a function?]
+
+        # for i in range(len(self.collection[1])):
+        #     title = self.collection[1][i]['title']
+        #     artist = self.collection[1][i]['artist']
+        #     genres = self.collection[1][i]['genres']
+        #     styles = self.collection[1][i]['styles']
+        #     year = self.collection[1][i]['year']
+        #     master_url = self.collection[1][i]['master_url']
+        #     instance_id = self.collection[1][i]['instance_id']
+        #     labels = self.collection[1][i]['labels']
+        #
+        #     rec = Record(artist, title, genres, styles, year, master_url, instance_id, labels)
+        #     rec.reissue_year = self.collection[1][i]['reissue_year']
+        #     rec.reissue = self.collection[1][i]['reissue']
+        #     records.append(rec)
+        #     collection_info = self.collection[0]
+        #     self._initialize_key_lists(rec)
 
     def __load_from_discogs__(self):
-        #TODO load from discogs
         #use self.fileFolder, make request, then format the data
         coll_list = []
         try:
             url = f"https://api.discogs.com/users/{self.user}/collection/folders/{self.fileFolder}" \
                   f"/releases?token={self.token}&per_page=100"
             response = requests.get(url)
-            Discogs_Collection.__error_check(response)
+            self.__error_check(response)
             coll_dict = response.json()
             coll_list.append(coll_dict)
             page_num = coll_dict['pagination']['pages']
@@ -59,13 +78,55 @@ class Discogs_Collection:
         except requests.exceptions.ConnectionError:
             print("ConnectionError: Max retries exceeded.  No connection established.\nExiting...")
             sys.exit(4)
+        self.__format_collection(coll_list)
 
-        #TODO now format the collection
+    def __format_collection(self, coll):
+        formatted_collection = []
+        collection_info = {}
+        records = []
+
+        # Create a list of Record objects containing relevant data from Discogs API call
+        collection_info['date_created'] = time.localtime()
+        collection_info['total'] = coll[0]['pagination']['items']
+        collection_info['master_data'] = False
+        collection_info['reissue_data'] = False
+        # Getting record information from coll
+        for i in range(len(coll)):
+            for j in range(len(coll[i]['releases'])):
+                title = coll[i]['releases'][j]['basic_information']['title']
+                artist = coll[i]['releases'][j]['basic_information']['artists'][0]['name']
+                genres = coll[i]['releases'][j]['basic_information']['genres']
+                styles = coll[i]['releases'][j]['basic_information']['styles']
+                year = coll[i]['releases'][j]['basic_information']['year']
+                instance_id = coll[i]['releases'][j]['instance_id']
+                try:
+                    master_url = coll[i]['releases'][j]['basic_information']['master_url']
+                except KeyError:
+                    master_url = None
+                format_list = coll[i]['releases'][j]['basic_information']['formats']
+                label_list = coll[i]['releases'][j]['basic_information']['labels']
+
+                rec = Record(artist, title, genres, styles, year, master_url, instance_id, label_list)
+
+                for f in range(len(format_list)):
+                    try:
+                        if 'Reissue' in format_list[f]['descriptions']:
+                            rec.reissue = True
+                            self.reissue_num += 1
+                    except KeyError:
+                        # box sets include a format which does not contain a 'descriptions' tag
+                        pass
+                records.append(rec)
+                self._initialize_key_lists(rec)
+
+        formatted_collection.append(collection_info)
+        formatted_collection.append(records)
+        self.collection = formatted_collection
+
     def __get_folders(self):
         # TODO display your folders
 
-    @staticmethod
-    def __error_check(res):
+    def __error_check(self,res):
         # Handling responses other than OK
         if not res.ok:
             print(f"An Error Occurred --  Code {res.status_code}: {res.reason}.")
@@ -75,6 +136,18 @@ class Discogs_Collection:
                  print("Please check that your token is valid and try again.")
             sys.exit(4)
         return 0
+
+    def _initialize_key_lists(self, record):
+        # Initializing key lists
+        for s in record.styles:
+            if not (s in self.style_list):
+                self.style_list.append(s)
+        for g in record.genres:
+            if not (g in self.genre_list):
+                self.genre_list.append(g)
+        if not (record.decade in self.decade_list):
+            self.decade_list.append(record.decade)
+
 
 class Record:
     def __init__(self, a, t, g, s, y, murl, iid, l):
@@ -239,88 +312,6 @@ Loading your Discogs collection...''')
         else:
             print("Invalid command.  Enter -h for help")
 
-
-def format_discogs(arg_d, coll, g_list, s_list, d_list, re_s, f_file):
-
-    formatted_collection = []
-    collection_info = {}
-    records = []
-
-    # Create a list of Record objects containing relevant data from Discogs API calls
-    if not f_file:
-        # Get info for the header from coll and arg_d (excluding token for security reasons)
-        collection_info['date_created'] = time.localtime()
-        collection_info['total'] = coll[0]['pagination']['items']
-        for key in arg_d:
-            if key == 'token':
-                continue
-            else:
-                collection_info[key] = arg_d[key]
-        collection_info['master_data'] = False
-        collection_info['reissue_data'] = False
-        # Getting record information from coll
-        for i in range(len(coll)):
-            for j in range(len(coll[i]['releases'])):
-                title = coll[i]['releases'][j]['basic_information']['title']
-                artist = coll[i]['releases'][j]['basic_information']['artists'][0]['name']
-                genres = coll[i]['releases'][j]['basic_information']['genres']
-                styles = coll[i]['releases'][j]['basic_information']['styles']
-                year = coll[i]['releases'][j]['basic_information']['year']
-                instance_id = coll[i]['releases'][j]['instance_id']
-                try:
-                    master_url = coll[i]['releases'][j]['basic_information']['master_url']
-                except KeyError:
-                    master_url = None
-                format_list = coll[i]['releases'][j]['basic_information']['formats']
-                label_list = coll[i]['releases'][j]['basic_information']['labels']
-
-                rec = Record(artist, title, genres, styles, year, master_url, instance_id, label_list)
-
-                for f in range(len(format_list)):
-                    try:
-                        if 'Reissue' in format_list[f]['descriptions']:
-                            rec.reissue = True
-                            re_s[0] += 1
-                    except KeyError:
-                        # box sets include a format which does not contain a 'descriptions' tag
-                        pass
-                records.append(rec)
-                _initialize_key_lists(s_list, g_list, d_list, rec)
-        # TODO: why did I need re_s again?
-        #collection_info['reissue_total'] = re_s[0]
-    else:
-        for i in range(len(coll[1])):
-            title = coll[1][i]['title']
-            artist = coll[1][i]['artist']
-            genres = coll[1][i]['genres']
-            styles = coll[1][i]['styles']
-            year = coll[1][i]['year']
-            master_url = coll[1][i]['master_url']
-            instance_id = coll[1][i]['instance_id']
-            labels = coll[1][i]['labels']
-
-            rec = Record(artist, title, genres, styles, year, master_url, instance_id, labels)
-            rec.reissue_year = coll[1][i]['reissue_year']
-            rec.reissue = coll[1][i]['reissue']
-            records.append(rec)
-            collection_info = coll[0]
-            _initialize_key_lists(s_list, g_list, d_list, rec)
-
-    formatted_collection.append(collection_info)
-    formatted_collection.append(records)
-    return formatted_collection
-
-
-def _initialize_key_lists(sl, gl, dl, rcd):
-    # Initializing key lists
-    for s in rcd.styles:
-        if not(s in sl):
-            sl.append(s)
-    for g in rcd.genres:
-        if not(g in gl):
-            gl.append(g)
-    if not (rcd.decade in dl):
-        dl.append(rcd.decade)
 
 
 def _key_format(x_list):
@@ -555,20 +546,6 @@ def get_folders(arg_d):
         except requests.exceptions.ConnectionError as e:
             print("ConnectionError: No connection established.  Max retries exceeded.\nExiting...")
             sys.exit(4)
-
-
-
-def get_discogs(arg_d, ff):
-    col_list = []
-        try:
-
-
-
-
-            return col_list
-
-
-
 
 def get_masters(coll, token, num_r, r, m):
 
