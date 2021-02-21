@@ -124,6 +124,7 @@ class Discogs_Collection:
         collection_info['decades'] = self.decade_list
         formatted_collection.append(collection_info)
         formatted_collection.append(records)
+        formatted_collection[1].sort(key=lambda x: x.artist)
         self.collection = formatted_collection
 
     def _get_folders(self): #TODO
@@ -164,7 +165,40 @@ class Discogs_Collection:
         with open(f"{self.collection[0]['inputfile']}", 'w') as fout:
             json.dump(j_out, fout)
 
+    def display_keys(self):
+        self.display_genre_keys()
+        self.display_style_keys()
+        self.display_decade_keys()
 
+    def display_genre_keys(self):
+        print(f"\nGenre Keys: {len(self.genre_list)}\n")
+        out = self._key_format(self.genre_list)
+        print(out)
+
+    def display_decade_keys(self):
+        print(f"\nDecade Keys: {len(self.decade_list)}\n")
+        out = self._key_format(self.decade_list)
+        print(out)
+
+    def display_style_keys(self):
+        print(f"\nStyle Keys: {len(self.style_list)}\n")
+        out = self._key_format(self.style_list)
+        print(out)
+
+    def _key_format(self, x_list):
+        x = divmod(len(x_list), 7)
+        remainder = x[1]
+        breaks = x[0]
+        x_index = 0
+        str = ''
+
+        while breaks:
+            str += " | ".join(x_list[x_index:x_index + 7]) + '\n'
+            x_index += 7
+            breaks -= 1
+        str +=" | ".join(x_list[x_index:x_index + remainder]) + '\n'
+
+        return str
 
 
 class Record:
@@ -254,7 +288,7 @@ def main(argv):
             reissues = True
         elif opt in ['-m', '--master']:
             master = True
-        elif opt in ['-f', '--folders']:
+        elif opt in ['-f', '--folders']: #TODO refactor
             get_folders(arg_dict)
 
     print('''
@@ -272,28 +306,19 @@ def main(argv):
 
 Loading your Discogs collection...''')
 
-    genre_list = []
-    style_list = []
-    decade_list = []
-    reissue_num = [0]
+    myCollection = Discogs_Collection(arg_dict['username'],arg_dict['token'],arg_dict['inputfile']);
 
 # TODO: make this its own function
     # Obtain collection from Discogs, sort by artist name, then sort genres and styles alphabetically, decades by year
-    collection = get_discogs(arg_dict, from_file)
-    f_collection = format_discogs(arg_dict, collection, genre_list, style_list, decade_list, reissue_num, from_file)
-    f_collection[1].sort(key=lambda x: x.artist)
+
     if master or reissues:
         get_masters(f_collection, arg_dict['token'], reissue_num, reissues, master)
-
-    genre_list.sort()
-    style_list.sort()
-    decade_list.sort()
 
     # User Input
     while True:
         cmd = input("Command: ").lower()
         if cmd == 'k':
-            display_keys(style_list, genre_list, decade_list)
+            Discogs_Collection.display_keys()
         elif cmd in ['s', 'g', 'a', 'o', 'd']:
             display(f_collection, style_list, genre_list, decade_list, cmd, reissues, master, from_file)
         elif cmd == 'r':
@@ -329,35 +354,6 @@ Loading your Discogs collection...''')
                 continue
         else:
             print("Invalid command.  Enter -h for help")
-
-
-
-def _key_format(x_list):
-    # TODO: import textwrap?
-    x = divmod(len(x_list), 7)
-    remainder = x[1]
-    breaks = x[0]
-    x_index = 0
-
-    while breaks:
-        print(" | ".join(x_list[x_index:x_index + 7]))
-        x_index += 7
-        breaks -= 1
-    print(" | ".join(x_list[x_index:x_index + remainder]))
-
-
-def display_keys(s_list, g_list, d_list):
-
-    if s_list:
-        print(f"\nStyle Keys: {len(s_list)}\n")
-        _key_format(s_list)
-    if g_list:
-        print(f"\nGenre Keys: {len(g_list)}\n")
-        _key_format(g_list)
-    if d_list:
-        print(f"\nDecade Keys: {len(d_list)}\n")
-        _key_format(d_list)
-
 
 def _overview_display(x_list, x_stats, x_all, coll):
     # Handles text formatting for the overview option (will print style, genre and decade lists in same format)
@@ -565,7 +561,7 @@ def get_folders(arg_d):
             print("ConnectionError: No connection established.  Max retries exceeded.\nExiting...")
             sys.exit(4)
 
-def get_masters(coll, token, num_r, r, m):
+def get_masters(coll, token, num_r, r, m): #make this async - individual calls after the main call.
 
     wait_str = ""
     time_tup = ()
@@ -644,26 +640,6 @@ def get_masters(coll, token, num_r, r, m):
         count += 1
     print()
     return 0
-
-
-def json_file(coll, f_in=0):
-    j_list = []
-    j_out = []
-
-    # TODO: output to collections folder instead of main folder
-    # TODO: handle FileNotFoundError -- if FNF ask for new file path or enter -m to go to main menu
-    if not f_in:
-        coll[0]['inputfile'] = input("Save File As: ") + ".json"
-        j_out.append(coll[0])
-        for r in coll[1]:
-            j_list.append(vars(r))
-        j_out.append(j_list)
-        with open(f"{coll[0]['inputfile']}", 'w') as fout:
-            json.dump(j_out, fout)
-    else:
-        with open(f_in, 'r') as read_file:
-            coll_data = json.load(read_file)
-        return coll_data
 
 
 def update_collection(coll, args, g_list, s_list, d_list, re_s):
