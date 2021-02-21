@@ -5,7 +5,8 @@ import time
 import json
 import random
 
-class Discogs_Collection:
+
+class DiscogsCollection:
     def __init__(self, user="", token="", inputFile="", fileFolder=0):
         self.collection = []
         self.user = user
@@ -27,6 +28,7 @@ class Discogs_Collection:
         with open(self.inputFile, 'r') as read_file:
             self.collection = json.load(read_file)
         records = []
+        rec = ""
         for i in range(len(self.collection[1])):
             title = self.collection[1][i]['title']
             artist = self.collection[1][i]['artist']
@@ -68,7 +70,7 @@ class Discogs_Collection:
                     # Last page won't have next url
                     break
                 response = requests.get(coll_next)
-                Discogs_Collection.__error_check(response)
+                DiscogsCollection.__error_check(response)
                 coll_dict = response.json()
                 coll_list.append(coll_dict)
         except KeyError:
@@ -127,8 +129,41 @@ class Discogs_Collection:
         formatted_collection[1].sort(key=lambda x: x.artist)
         self.collection = formatted_collection
 
-    def _get_folders(self): #TODO
-        return
+    def _get_folders(self): #TODO make this "change_folder" and let user reload
+        while True:
+            try:
+                folder_ids = []
+                folder_opt = -1
+                url = f"https://api.discogs.com/users/{self.username}/collection/folders?token={self.token}"
+                response = requests.get(url)
+                self._error_check(response)
+                folder_dict = response.json()
+                for folder in folder_dict['folders']:
+                    folder_ids.append(str(folder['id']))
+                while folder_opt not in folder_ids:
+                    print("Choose Folder:")
+                    for folder in folder_dict['folders']:
+                        print(f"For {folder['name']}, enter {folder['id']}")
+                    folder_opt = input("Folder number: ")
+                    if folder_opt == 'h':
+                        print(
+                            "Select your folder from the options above.  If you do not see the folder you are looking "
+                            "for, try running this program with a token.")
+                    elif folder_opt == 'q':
+                        sys.exit()
+                self.fileFolder = folder_opt
+                return 0
+            except KeyError:
+                if not self.username or not self.token:
+                    self.username = input("Enter Username: ")
+                    self.token = input("Enter Token: ")
+                else:
+                    print("Something went wrong.  Exiting")
+                    sys.exit(4)
+            except requests.exceptions.ConnectionError:
+                print("ConnectionError: No connection established.  Max retries exceeded.\nExiting...")
+                sys.exit(4)
+
 
     def __error_check(self,res):
         # Handling responses other than OK
@@ -306,7 +341,7 @@ def main(argv):
 
 Loading your Discogs collection...''')
 
-    myCollection = Discogs_Collection(arg_dict['username'],arg_dict['token'],arg_dict['inputfile']);
+    myCollection = DiscogsCollection(arg_dict['username'],arg_dict['token'],arg_dict['inputfile']);
 
 # TODO: make this its own function
     # Obtain collection from Discogs, sort by artist name, then sort genres and styles alphabetically, decades by year
@@ -318,7 +353,7 @@ Loading your Discogs collection...''')
     while True:
         cmd = input("Command: ").lower()
         if cmd == 'k':
-            Discogs_Collection.display_keys()
+            DiscogsCollection.display_keys()
         elif cmd in ['s', 'g', 'a', 'o', 'd']:
             display(f_collection, style_list, genre_list, decade_list, cmd, reissues, master, from_file)
         elif cmd == 'r':
@@ -523,43 +558,6 @@ def display(coll, s_list, g_list, d_list, c, r, m, ff):
         if not coll[0]['master_data']:
             print("For most accurate Total Decade data, run program with -m")
 
-
-
-
-
-def get_folders(arg_d):
-    while True:
-        try:
-            folder_ids = []
-            folder_opt = -1
-            url = f"https://api.discogs.com/users/{arg_d['username']}/collection/folders?token={arg_d['token']}"
-            response = requests.get(url)
-            _error_check(response)
-            folder_dict = response.json()
-            for folder in folder_dict['folders']:
-                folder_ids.append(str(folder['id']))
-            while folder_opt not in folder_ids:
-                print("Choose Folder:")
-                for folder in folder_dict['folders']:
-                    print(f"For {folder['name']}, enter {folder['id']}")
-                folder_opt = input("Folder number: ")
-                if folder_opt == 'h':
-                    print("Select your folder from the options above.  If you do not see the folder you are looking "
-                          "for, try running this program with a token.")
-                elif folder_opt == 'q':
-                    sys.exit()
-            arg_d['folder'] = folder_opt
-            return 0
-        except KeyError:
-            if not arg_d['username'] or not arg_d['token']:
-                arg_d['username'] = input("Enter Username: ")
-                arg_d['token'] = input("Enter Token: ")
-            else:
-                print("Something went wrong.  Exiting")
-                sys.exit(4)
-        except requests.exceptions.ConnectionError as e:
-            print("ConnectionError: No connection established.  Max retries exceeded.\nExiting...")
-            sys.exit(4)
 
 def get_masters(coll, token, num_r, r, m): #make this async - individual calls after the main call.
 
