@@ -220,6 +220,63 @@ class DiscogsCollection:
         out = self._key_format(self.style_list)
         print(out)
 
+    # displaying collection by decade, style, or genre
+    # takes an style as an argument, prints out the records
+    # that match that argument, otherwise returns no records
+
+    def bydecade(self, decade):
+
+        return
+
+    def bystyle(self, style):
+        # TODO instead of doing this, have this method return an object
+        # (array of records?). Then have a separate method do the display. That way,
+        # you could take the object that was filtered by style and pass it
+        # to another method, thus allowing for multiple filters
+        if __name__ == '__main__':
+            print("-" * 20 + style.upper() + "-" * 20)
+            count = 0
+            for record in self.collection:
+                if style.lower() in record.styles.lower():
+                    r_str = self._reissue_check(record)
+                    print(f"{count + 1}. {record.artist} - {record.title} ({record.year}){r_str}\n\t" +
+                          f"Styles: {' | '.join(record.styles)}\n\tGenres: {' | '.join(record.genres)}")
+            print("-" * 56)
+            print(f"Total: {count}", end="")
+        else:
+            style_sub_list = []
+            for record in self.collection:
+                if style.lower() in record.styles.lower():
+                    style_sub_list.append(record)
+            filtered_collection = DiscogsCollection()
+            filtered_collection.style_list = self.style_list
+            filtered_collection.genre_list = self.genre_list
+            filtered_collection.decade_list = self.decade_list
+            filtered_collection.collection = style_sub_list
+            return filtered_collection
+
+    def bygenre(self, genre):
+        print("-" * 20 + genre.upper() + "-" * 20)
+        count = 0
+        for record in self.collection:
+            if genre.lower() in record.genres.lower():
+                r_str = self._reissue_check(record)
+                print(f"{count + 1}. {record.artist} - {record.title} ({record.year}){r_str}\n\t" +
+                      f"Styles: {' | '.join(record.styles)}\n\tGenres: {' | '.join(record.genres)}")
+        print("-" * 56)
+        print(f"Total: {count}", end="")
+        return
+
+    def overview(self):
+        return
+
+    # This method checks to see if a given record is a reissue.  If it
+    def _reissue_check(self, record):
+        if not record.reissue_year:
+            return "(R): " + record.reissue_year
+        else:
+            return ""
+
     def _key_format(self, x_list):
         x = divmod(len(x_list), 7)
         remainder = x[1]
