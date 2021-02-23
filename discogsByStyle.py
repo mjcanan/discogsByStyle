@@ -17,6 +17,7 @@ class DiscogsCollection:
         self.genre_list = []
         self.style_list = []
         self.reissue_num = 0
+        self.filters = []
 
         #if given input file, load from file and get keys, else load from discogs and get keys
         if inputFile:
@@ -45,7 +46,7 @@ class DiscogsCollection:
             records.append(rec)
 
         collection_info = self.collection[0]
-        self._initialize_key_lists(rec)
+        self._initialize_key_lists() #refactor so that you loop through collection, instead of as you go with each record (then I can use intailize_keys again with filters).
         self.collection = collection_info
         self.collection.append(records)
 
@@ -176,16 +177,17 @@ class DiscogsCollection:
             sys.exit(4)
         return 0
 
-    def _initialize_key_lists(self, record):
+    def _initialize_key_lists(self):
         # Initializing key lists
-        for s in record.styles:
-            if not (s in self.style_list):
-                self.style_list.append(s)
-        for g in record.genres:
-            if not (g in self.genre_list):
-                self.genre_list.append(g)
-        if not (record.decade in self.decade_list):
-            self.decade_list.append(record.decade)
+        for record in self.collection:
+            for s in record.styles:
+                if not (s in self.style_list):
+                    self.style_list.append(s)
+            for g in record.genres:
+                if not (g in self.genre_list):
+                    self.genre_list.append(g)
+            if not (record.decade in self.decade_list):
+                self.decade_list.append(record.decade)
 
     def save_collection(self, save_as):
         j_list = []
@@ -229,6 +231,8 @@ class DiscogsCollection:
         return
 
     def bystyle(self, style):
+        # Returns a new DiscogsCollection object, filtered by style
+
         # TODO instead of doing this, have this method return an object
         # (array of records?). Then have a separate method do the display. That way,
         # you could take the object that was filtered by style and pass it
@@ -245,13 +249,21 @@ class DiscogsCollection:
             print(f"Total: {count}", end="")
         else:
             style_sub_list = []
+            records_found = False
+            # For every record in the collection, see if it matches the filter
             for record in self.collection:
                 if style.lower() in record.styles.lower():
                     style_sub_list.append(record)
+                    records_found = True
+            # If no records match the filter, return with no result
+            if not records_found:
+                return
+            # Else, create a new collection object made of the filtered records
             filtered_collection = DiscogsCollection()
-            filtered_collection.style_list = self.style_list
-            filtered_collection.genre_list = self.genre_list
-            filtered_collection.decade_list = self.decade_list
+            # Add the filter name to the list of filters for tracking and display
+            filtered_collection.filters.append(style)
+            # Re-initalize key lists for filtered collection
+            filtered_collection._initialize_key_lists()
             filtered_collection.collection = style_sub_list
             return filtered_collection
 
@@ -272,7 +284,7 @@ class DiscogsCollection:
 
     # This method checks to see if a given record is a reissue.  If it
     def _reissue_check(self, record):
-        if not record.reissue_year:
+        if record.reissue:
             if record.reissue_year == 0:
                 return "(R): n/a"
             else:
