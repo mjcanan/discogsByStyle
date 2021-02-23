@@ -233,7 +233,7 @@ class DiscogsCollection:
         # (array of records?). Then have a separate method do the display. That way,
         # you could take the object that was filtered by style and pass it
         # to another method, thus allowing for multiple filters
-        if __name__ == '__main__':
+        if __name__ == '__main__': #make this separate function?
             print("-" * 20 + style.upper() + "-" * 20)
             count = 0
             for record in self.collection:
@@ -273,7 +273,10 @@ class DiscogsCollection:
     # This method checks to see if a given record is a reissue.  If it
     def _reissue_check(self, record):
         if not record.reissue_year:
-            return "(R): " + record.reissue_year
+            if record.reissue_year == 0:
+                return "(R): n/a"
+            else:
+                return "(R): " + record.reissue_year
         else:
             return ""
 
