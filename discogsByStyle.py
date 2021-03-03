@@ -120,8 +120,8 @@ class DiscogsCollection:
                         # box sets include a format which does not contain a 'descriptions' tag
                         pass
                 records.append(rec)
-                self._initialize_key_lists(rec)
 
+        self._initialize_key_lists()
         collection_info['styles'] = self.style_list
         collection_info['genres'] = self.genre_list
         collection_info['decades'] = self.decade_list
@@ -130,7 +130,8 @@ class DiscogsCollection:
         formatted_collection[1].sort(key=lambda x: x.artist)
         self.collection = formatted_collection
 
-    def _get_folders(self): #TODO make this "change_folder" and let user reload
+
+    def change_folders(self): #TODO make this "change_folder" and let user reload
         while True:
             try:
                 folder_ids = []
@@ -148,11 +149,15 @@ class DiscogsCollection:
                     folder_opt = input("Folder number: ")
                     if folder_opt == 'h':
                         print(
-                            "Select your folder from the options above.  If you do not see the folder you are looking "
-                            "for, try running this program with a token.")
+                            "Select your folder from the options above to load that folder." +
+                            "  Enter q to return without reloading"
+                        )
                     elif folder_opt == 'q':
-                        sys.exit()
+                        # abort reload and return
+                        return 0
+                # change folder in collection, reload from new folder
                 self.fileFolder = folder_opt
+                self.__load_from_discogs__()
                 return 0
             except KeyError:
                 if not self.username or not self.token:
@@ -165,7 +170,6 @@ class DiscogsCollection:
                 print("ConnectionError: No connection established.  Max retries exceeded.\nExiting...")
                 sys.exit(4)
 
-
     def __error_check(self,res):
         # Handling responses other than OK
         if not res.ok:
@@ -173,7 +177,7 @@ class DiscogsCollection:
             if res.status_code == 429:
                 print("Please wait one minute before retrying.")
             elif res.status_code == 401:
-                 print("Please check that your token is valid and try again.")
+                print("Please check that your token is valid and try again.")
             sys.exit(4)
         return 0
 
@@ -262,7 +266,7 @@ class DiscogsCollection:
             filtered_collection = DiscogsCollection()
             # Add the filter name to the list of filters for tracking and display
             filtered_collection.filters.append(style)
-            # Re-initalize key lists for filtered collection
+            # Re-initialize key lists for filtered collection
             filtered_collection._initialize_key_lists()
             filtered_collection.collection = style_sub_list
             return filtered_collection
