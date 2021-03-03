@@ -20,10 +20,10 @@ class DiscogsCollection:
         self.filters = []
 
         #if given input file, load from file and get keys, else load from discogs and get keys
-        if inputFile:
-            self.__load_from_file__()
-        else:
-            self.__load_from_discogs__()
+        # if inputFile:
+        #     self.__load_from_file__()
+        # else:
+        #     self.__load_from_discogs__()
 
     def __load_from_file__(self):
         with open(self.inputFile, 'r') as read_file:
@@ -130,8 +130,7 @@ class DiscogsCollection:
         formatted_collection[1].sort(key=lambda x: x.artist)
         self.collection = formatted_collection
 
-
-    def change_folders(self): #TODO make this "change_folder" and let user reload
+    def change_folders(self):
         while True:
             try:
                 folder_ids = []
@@ -170,7 +169,7 @@ class DiscogsCollection:
                 print("ConnectionError: No connection established.  Max retries exceeded.\nExiting...")
                 sys.exit(4)
 
-    def __error_check(self,res):
+    def __error_check(self, res):
         # Handling responses other than OK
         if not res.ok:
             print(f"An Error Occurred --  Code {res.status_code}: {res.reason}.")
@@ -196,7 +195,8 @@ class DiscogsCollection:
     def save_collection(self, save_as):
         j_list = []
         j_out = []
-        #If user chooses save as, or has no inputfile, then prompt for file
+
+        # If user chooses save as, or has no inputfile, then prompt for file
         if save_as or not self.inputFile:
             self.collection[0]['inputfile'] = input("Save File As: ") + ".json"
         j_out.append(self.collection[0])
@@ -286,6 +286,9 @@ class DiscogsCollection:
     def overview(self):
         return
 
+    def load_masters(self):
+        # slow process - make separate thread
+        return
     # This method checks to see if a given record is a reissue.  If it
     def _reissue_check(self, record):
         if record.reissue:
@@ -344,7 +347,7 @@ def main(argv):
         "folder": '0'
     }
     usage = '''           Usage: 
-            discogsByStyle.py -u <username> [<-t token>] [-i --ifile filepath] [-m --master] [-r --reissue] [-v --verbose] [-f --folders]'''
+            discogsByStyle.py -u <username> [-t <token>] [-i --ifile <filepath>] [-m --master] [-r --reissue] [-v --verbose] [-f --folder <folder number>]'''
 
     # Error check for proper command line inputs
     if not argv:
@@ -352,7 +355,7 @@ def main(argv):
         sys.exit(3)
     try:
         # TODO: argparse instead of getopt
-        opts, args = getopt.getopt(argv, 'hu:i:t:frmv', ['username=', 'token=', 'ifile=', 'help', 'reissue', 'master', 'verbose', 'folders'])
+        opts, args = getopt.getopt(argv, 'hu:i:t:f:rmv', ['username=', 'token=', 'ifile=', 'help', 'reissue', 'master', 'verbose', 'folder='])
     except getopt.GetoptError:
         print('Invalid input.  Enter -h for usage.')
         sys.exit(2)
@@ -363,8 +366,7 @@ def main(argv):
 
     for opt, arg in opts:
         if opt == '-h' or opt == '--help' or len(argv) == 1:
-            print(usage)
-            if opt == '-v' or opt == '--verbose': #refaactor usage to allow for verbose
+            if opt == '-v' or opt == '--verbose':
                 print('''
                   
                 An authentication token is needed to use this program
@@ -376,7 +378,7 @@ def main(argv):
             Flags and Options:
                 -u or --username : your Discogs username should be entered here
                 -t or --token    : load collection from Discogs using your authentication token
-                -f or --folders  : load collection from particular Discogs folder (use with -u and -t)
+                -f or --folder   : load collection from particular Discogs folder (use with -u and -t) - default is 0
                 -i or --ifile    : load collection from a saved file
                 -r or --reissue  : load data from your reissues' masters on Discogs
                 -m or --master   : load data from all your albums' masters on Discogs
@@ -387,6 +389,8 @@ def main(argv):
                     !!! release dates for your reissues. Otherwise, the year    !!!
                     !!! information for your albums will be the year your       !!!
                     !!! particular pressing was released.                       !!!''')
+            else:
+                print(usage)
             sys.exit()
         elif opt in ['-t', '--token']:
             arg_dict['token'] = arg
@@ -399,8 +403,8 @@ def main(argv):
             reissues = True
         elif opt in ['-m', '--master']:
             master = True
-        elif opt in ['-f', '--folders']: #TODO refactor
-            get_folders(arg_dict)
+        elif opt in ['-f', '--folder']:
+            arg_dict['folder'] = arg
 
     print('''
             ********************DISCOGS SORTER**********************
@@ -417,13 +421,13 @@ def main(argv):
 
 Loading your Discogs collection...''')
 
-    myCollection = DiscogsCollection(arg_dict['username'],arg_dict['token'],arg_dict['inputfile']);
+    myCollection = DiscogsCollection(arg_dict['username'],arg_dict['token'],arg_dict['inputfile'],arg_dict['folder'])
 
 # TODO: make this its own function
     # Obtain collection from Discogs, sort by artist name, then sort genres and styles alphabetically, decades by year
 
     if master or reissues:
-        get_masters(f_collection, arg_dict['token'], reissue_num, reissues, master)
+        DiscogsCollection.load_masters()
 
     # User Input
     while True:
