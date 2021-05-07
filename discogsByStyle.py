@@ -705,6 +705,7 @@ def update_collection(coll, args, g_list, s_list, d_list, re_s):
 #TODO: make this a separate file and refactor everything into a Collection object
 def random_record(coll, r_s_list, r_g_list, r_d_list):
     flag = "z"
+    errorFlag = ""
 
     while flag not in ('a', 'g', 's', 'd'):
         print('''
@@ -736,25 +737,31 @@ Type "-q" to quit''')
         elif f_cmd == '-m':
             return
         else:
-            search_list = []
-            if flag == 'g':
-                for r in coll[1]:
-                    for g in r.genres:
-                        if f_cmd.lower() == g.lower():
-                            search_list.append(r)
-            if flag == 's':
-                for r in coll[1]:
-                    for s in r.styles:
-                        if f_cmd.lower() == s.lower():
-                            search_list.append(r)
-            if flag == 'd':
-                for r in coll[1]:
-                    if f_cmd == r.decade:
-                        search_list.append(r)
-            i = random.randint(0, len(search_list)-1)
             try:
+                search_list = []
+                if flag == 'g':
+                    errorFlag = "genre"
+                    for r in coll[1]:
+                        for g in r.genres:
+                            if f_cmd.lower() == g.lower():
+                                search_list.append(r)
+                if flag == 's':
+                    errorFlag = "style"
+                    for r in coll[1]:
+                        for s in r.styles:
+                            if f_cmd.lower() == s.lower():
+                                search_list.append(r)
+                if flag == 'd':
+                    errorFlag = "decade"
+                    for r in coll[1]:
+                        if f_cmd == r.decade:
+                            search_list.append(r)
+                i = random.randint(0, len(search_list)-1)
                 print(f"{search_list[i].artist} - {search_list[i].title} - {search_list[i].year}")
                 print(f"G: {search_list[i].genres} - S: {search_list[i].styles}")
+            except ValueError:
+                print(f'Invalid input: no {errorFlag} matching {f_cmd}')
+                continue
             except IndexError:
                 print("No records found")
                 continue
